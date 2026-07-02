@@ -5,6 +5,8 @@ Redistributable pack of **user-level Claude Code hooks** extracted from
 across 5 lifecycle events, plus 3 dormant scripts and 1 sub-bundle
 (`fix-uat-env/`), with design rubric and value-cascade template.
 
+**🌏 中文版:** [README.zh-CN.md](./README.zh-CN.md) — 含一键复制发给 LLM 的"逐个解释 + 选择性安装"提示词。
+
 ## Install
 
 ```bash
