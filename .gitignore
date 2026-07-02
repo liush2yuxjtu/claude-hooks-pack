@@ -21,3 +21,11 @@ settings.local.*.json
 test/output/
 test/.last-*
 *.test.log
+
+# Stray artifacts from ad-hoc API / archival workflows on the source box.
+# Don't commit generated dumps or tarballs to the public pack.
+*.bundle
+claude-hooks-pack*.tar.gz
+
+# Settings fragment generated for local testing
+settings/hooks.fragment.local.json
