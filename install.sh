@@ -35,9 +35,13 @@ TARGET_SETTINGS="$HOME/.claude/settings.json"
 log() { printf '[install.sh] %s\n' "$*"; }
 run() {
   if (( DRY_RUN )); then
-    printf '[dry-run] %s\n' "$*"
+    printf '[dry-run]'
+    for arg in "$@"; do
+      printf ' %q' "$arg"
+    done
+    printf '\n'
   else
-    eval "$@"
+    "$@"
   fi
 }
 

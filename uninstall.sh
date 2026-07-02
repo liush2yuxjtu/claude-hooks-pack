@@ -12,7 +12,9 @@ log() { printf '[uninstall.sh] %s\n' "$*"; }
 
 # ── 1. Restore settings from newest backup ────────────────────────────
 if [[ -f "$TARGET_SETTINGS" ]]; then
-  bak="$(ls -1t "$TARGET_SETTINGS".bak-* 2>/dev/null | head -1 || true)"
+  # Newest backup first. find + sort by mtime avoids the SC2012 ls-1t warning
+  # and handles non-alphanumeric filenames correctly.
+  bak="$(find "$TARGET_SETTINGS".bak-* -maxdepth 0 -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | awk '{sub(/^[0-9.]+ /, ""); print}')"
   if [[ -n "$bak" ]]; then
     log "==> restoring settings from $bak"
     mv "$bak" "$TARGET_SETTINGS"
