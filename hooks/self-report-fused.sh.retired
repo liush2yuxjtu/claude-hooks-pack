@@ -1,0 +1,173 @@
+#!/bin/bash
+# self-report-fused.sh — single Stop hook enforcing the 12-field self-attest.
+#                          TRANSCRIPT-GREP mode (per user directive 2026-06-13).
+#                          Block MUST appear at the BEGINNING of assistantLastMessage.
+#
+# === Contract ===
+#
+# 1. The assistant writes the 12-bool <self-report> block at the BEGINNING of
+#    its last message (NOT the end, NOT the middle). Format:
+#
+#      <self-report>
+#      premature_stopping: <true|false>
+#      permission_seeking: <true|false>
+#      ... (12 fields)
+#      silent_fallback: <true|false>
+#      </self-report>
+#
+#      ... (rest of the message)
+#
+# 2. This hook fires on Stop:
+#    - Block missing              -> block, reason = "place block at beginning, format is ..."
+#    - Block at wrong position    -> block, reason = "move to beginning"
+#    - Block at beginning, valid  -> silent approve
+#    - Transcript unreadable      -> silent approve (defensive)
+#    - jq missing                 -> silent approve (B-092 graceful degradation)
+#
+# 3. Side-channel compatibility: a legacy side-channel JSON file at
+#    $HOME/.claude/self-report/by-session/$CLAUDE_SESSION_ID.json, if present,
+#    is consumed (deleted). It is NOT gated on — transcript-grep is the source
+#    of truth. (Side-channel was the prior design; user moved to transcript-grep
+#    so the block is visible in the chat transcript at the beginning.)
+#
+# 4. Audit: each Stop appends one JSON line to ~/.claude/self-report/log.jsonl
+#    (fields: ts, session_id, action, position).
+#
+# Why BEGINNING: the user explicitly directed "ONLY display the hook content
+# at the beginning of assistantLastMessage instead of the final part". Block
+# at the end of a long message gets truncated by chat scroll-back; beginning
+# makes the attest immediately visible to the user before they read the body.
+
+set -uo pipefail
+
+# --- jq presence guard (B-092) ---
+if ! command -v jq >/dev/null 2>&1; then
+  # Silent fallback: hook still runs cleanly (exit 0) but the guard is
+  # neutered this turn. The agent can detect missing jq via its own tools.
+  echo '{"continue":true,"suppressOutput":true}'
+  exit 0
+fi
+
+# --- Paths ---
+LOG_DIR="$HOME/.claude/self-report"
+LOG_FILE="$LOG_DIR/log.jsonl"
+REPORT_DIR="$LOG_DIR/by-session"
+mkdir -p "$LOG_DIR" "$REPORT_DIR"
+
+# --- Hook input (Claude Code pipes Stop JSON on stdin) ---
+input=$(cat)
+
+session_id=$(echo "$input" | jq -r '.session_id // "unknown"' 2>/dev/null)
+transcript_path=$(echo "$input" | jq -r '.transcript_path // ""' 2>/dev/null)
+ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+REPORT_FILE="$REPORT_DIR/${session_id}.json"
+
+# --- Single source of truth for field order ---
+FIELDS=(
+  premature_stopping
+  permission_seeking
+  ownership_dodging
+  simplest_fix
+  reasoning_loop
+  known_limitation
+  skipped_repo_search
+  fabricated_value
+  placeholder_used
+  ambiguity_unresolved
+  contradiction_unresolved
+  silent_fallback
+)
+
+# Human-readable schema hint for the block_missing reason text.
+SCHEMA_HINT=$(printf '  - %s\n' "${FIELDS[@]}")
+
+# --- Side-channel compatibility: consume legacy file if present ---
+# (Was the prior design; user migrated to transcript-grep with BEGINNING block.
+# We still consume the file so it doesn't accumulate, but do NOT gate on it.)
+if [[ -f "$REPORT_FILE" ]]; then
+  rm -f "$REPORT_FILE"
+fi
+
+# --- Helper: append audit log ---
+log_action() {
+  local action="$1"
+  local position="${2:-}"
+  if [[ -n "$position" ]]; then
+    jq -cn --arg ts "$ts" --arg sid "$session_id" --arg action "$action" --arg pos "$position" \
+      '{ts:$ts, session_id:$sid, action:$action, position:$pos}' >> "$LOG_FILE"
+  else
+    jq -cn --arg ts "$ts" --arg sid "$session_id" --arg action "$action" \
+      '{ts:$ts, session_id:$sid, action:$action}' >> "$LOG_FILE"
+  fi
+}
+
+# --- Helper: emit block (decision: block + reason) ---
+emit_block() {
+  local reason="$1"
+  jq -n --arg reason "$reason" '{decision:"block", reason:$reason}'
+  exit 0
+}
+
+# --- Transcript guard ---
+if [[ -z "$transcript_path" ]] || [[ ! -f "$transcript_path" ]]; then
+  log_action "approve_no_transcript"
+  printf '{"continue": true, "suppressOutput": true}\n'
+  exit 0
+fi
+
+# --- Read last assistant message text from transcript JSONL ---
+# Transcript is JSONL; each line has {role, content: [...]}. We want the
+# text of the last assistant message. Defensive: if jq parse fails, silent
+# approve.
+last_msg=$(jq -r '
+  select(.role == "assistant") |
+  .content[]? |
+  select(.type == "text") |
+  .text
+' "$transcript_path" 2>/dev/null | tail -c 100000)
+
+if [[ -z "$last_msg" ]]; then
+  log_action "approve_no_last_msg"
+  printf '{"continue": true, "suppressOutput": true}\n'
+  exit 0
+fi
+
+# --- Check 1: block must be PRESENT (somewhere in the message) ---
+if [[ ! "$last_msg" =~ \<self-report\> ]]; then
+  log_action "block_missing"
+  emit_block "Your last message is missing the <self-report> block. Per user directive, the 12-field block MUST appear at the BEGINNING of assistantLastMessage (not the end). Use this exact format:
+
+<self-report>
+$SCHEMA_HINT</self-report>
+
+(then continue with your actual reply below)
+
+Re-emit with the fix."
+fi
+
+# --- Check 2: block must be at the BEGINNING (after optional leading whitespace) ---
+# Trim leading whitespace, then check if message starts with <self-report>.
+trimmed=$(printf '%s' "$last_msg" | sed 's/^[[:space:]]*//' | head -c 4096)
+if [[ ! "$trimmed" =~ ^\<self-report\> ]]; then
+  log_action "block_wrong_position"
+  emit_block "Your <self-report> block is NOT at the beginning of your last message. Per user directive, the block must be at the BEGINNING of assistantLastMessage (so it's immediately visible in chat scroll-back). Currently the block appears later in the message. Move the <self-report>...</self-report> block to the very start of your next reply, then continue with the actual content. Re-emit with the fix."
+fi
+
+# --- Check 3 (light): all 12 fields present in the block ---
+block_region=$(printf '%s' "$last_msg" | awk '/<self-report>/{p=1; next} /<\/self-report>/{p=0} p' | head -c 4096)
+missing=()
+for f in "${FIELDS[@]}"; do
+  if ! grep -q "^${f}:" <<<"$block_region"; then
+    missing+=("$f")
+  fi
+done
+if [[ ${#missing[@]} -gt 0 ]]; then
+  missing_csv=$(IFS=, ; echo "${missing[*]}")
+  log_action "block_missing_fields" "beginning"
+  emit_block "Your <self-report> block is at the beginning (good) but is missing these fields: $missing_csv. All 12 fields are required even if all false. Re-emit with the full block."
+fi
+
+# --- Approve ---
+log_action "approve" "beginning"
+printf '{"continue": true, "suppressOutput": true}\n'
+exit 0

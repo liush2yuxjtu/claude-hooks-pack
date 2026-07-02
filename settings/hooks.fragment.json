@@ -1,0 +1,8 @@
+{
+  "_comment": "Merge this object's top-level event keys into ~/.claude/settings.json. Hook scripts live at ~/.claude/hooks/<name>.sh after install.sh.",
+  "SubagentStart": null,
+  "UserPromptSubmit": null,
+  "PreToolUse": null,
+  "SessionStart": null,
+  "Stop": null
+}

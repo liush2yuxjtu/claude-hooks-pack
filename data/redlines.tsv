@@ -1,0 +1,33 @@
+# tool	regex	action	reason
+# ============================================================
+# Rule 1: prefer-prod-mode-for-demos
+# 演示用 next build && next start;dev 模式 1GB+ 内存被 jetsam 静默杀。
+# 覆盖 ≥20 surface: next/nuxt/astro/remix/sveltekit/gatsby/vite/webpack/parcel/snowpack/rspack/turbopack + npm/pnpm/yarn/bun/deno + nx/turbo/rush/lerna + zh俗称
+# ============================================================
+Bash	\b(next|nuxt|astro|remix|svelte-?kit|gatsby|vite|webpack(-dev-server)?|parcel|snowpack|rspack|turbopack)\s+(dev|serve)\b|\b(npm|pnpm|yarn|bun|deno)\s+(run\s+)?(dev|develop|start:dev|dev:start)\b|\b(nx|turbo|rush|lerna)\s+(run\s+)?dev\b|\bwebpack\s+serve\b|启动\s*dev|跑\s*dev|\bdev\s+(mode|server)\b|\bHMR\b|\bhot[\s-]?reload\b	block	prefer-prod-mode-for-demos: 演示一律 next build && next start,不准 next dev / pnpm dev / vite 等开发模式(注意:next/nuxt start 是 prod,本规则不拦)
+# ============================================================
+# Rule 2: never-make-mr  [DISABLED by user 2026-06-25 — open MR/PR freely]
+# 未经用户当场明示同意,不准开 MR / PR。
+# 覆盖 ≥20 surface: glab mr {create,new,open,submit,edit,update} + gh pr {create,new,open,submit,edit,ready} + hub + REST + GraphQL + 多语言别名
+# ============================================================
+# Bash	\bglab\s+mr\s+(create|new|open|submit|edit|update)\b|\bgh\s+pr\s+(create|new|open|submit|edit,update)\b|\bhub\s+pull-request\b|\bgit\s+request-pull\b|\bgh\s+(api|graphql)\b.*\b(pulls|pull_request)\b|\bglab\s+(api|graphql)\b.*\bmerge_request|\bcreate[_-](mr|pr|merge[_-]?request|pull[_-]?request)\b|\bopen[_-](mr|pr)\b|\bsubmit[_-](mr|pr)\b|/submit-mr\b|提\s*(MR|PR|merge|pull)|发\s*(MR|PR)|开\s*(MR|PR)|\bgitlab\s+api\b.*\bmerge\b.*\bPOST\b|\bgithub\s+api\b.*\bpulls\b.*\bPOST\b	block	never-make-mr: DISABLED
+# ============================================================
+# Rule 3: no-clean-worktree
+# CLAUDE.md 硬规则:不准自动清 git worktree;必须用户当场说"clean it up"。
+# 覆盖 ≥20 surface: git worktree remove/prune + rm -rf + find -delete + 中英文别名 + 工具别名 + 多步序列
+# ============================================================
+Bash	\bgit\s+worktree\s+(remove|prune)\b|\brm\s+-rf?\s+[^\n]*\.claude/worktrees\b|\brm\s+-rf?\s+[^\n]*\.git/worktrees\b|\bfind\s+[^\n]*\.claude/worktrees[^\n]*-delete\b|\bgit\s+worktree\s+unlock\b[^\n]*\bremove\b|\bgit\s+worktree\s+repair\b[^\n]*\bremove\b|\bgwtr\b|/tidy-chrome\s+--apply\b|/cleanup-worktrees\s+--apply\b|\b(clean|delete|remove|nuke|wipe|purge|trash)(\s+up)?\s+(the\s+|that\s+|this\s+|a\s+|all\s+|my\s+)?(git\s+)?worktree(s)?\b|(清理|清除|清掉|删除|删掉|干掉|移除)\s*(这个|那个|所有|全部)?\s*worktree|\brmdir\s+[^\n]*\.claude/worktrees\b|\brsync\b[^\n]*--delete[^\n]*\.claude/worktrees	block	no-clean-worktree: CLAUDE.md 硬规则,不准擅自清 worktree;用户必须当场说"clean it up"
+# ============================================================
+# Rule 4: frontend-no-render-side-effects (Edit/Write/MultiEdit, WARN-only)
+# render 函数体不准带副作用;regex 看不到 useEffect 包裹关系,只能宽网告警。
+# 覆盖 ≥20 surface: DOM mutation + 全局 storage + timer + 网络 + 事件 + state mutation
+# ⚠️ 2026-06-30 审计: 误报率 ~95% (312/381 WARN), 已知每次 cat <<HTML 写文档时触发。
+# 维持 WARN 不升级为 BLOCK; guard.log 噪音可接受（"宽网告警"设计目标）。
+# ============================================================
+Edit|Write|MultiEdit	\bapplyView\s*\(|\bapplyState\s*\(|\bdocument\.(getElementById|querySelector|querySelectorAll|title\s*=)|\bwindow\.(localStorage|sessionStorage|location)\.|\b(localStorage|sessionStorage)\.(setItem|getItem|removeItem|clear)\s*\(|\bsetTimeout\s*\(|\bsetInterval\s*\(|\bfetch\s*\(|\baxios\.(get|post|put|delete|patch)\s*\(|\bsubscribe\s*\(|\bemit\s*\(|\bdispatch\s*\(|\binnerHTML\s*=|\bouterHTML\s*=|\bappendChild\s*\(|\baddEventListener\s*\(|\bremoveEventListener\s*\(|\bmutate\s*\(|\bnavigator\.clipboard\.	warn	frontend-no-render-side-effects: render body 不准带副作用,务必包 useEffect / event handler(本规则宽网告警,会误伤,请人工核对)
+# ============================================================
+# Rule 5: i18n-preserve-diacritics (Edit/Write/MultiEdit, WARN-only)
+# 不准用 ASCII 替代 não/für/löschen 等带变音符的字符。
+# 覆盖 ≥40 surface: 葡萄牙语 + 德语 + 法语 + 西班牙语 + 拉丁带变音 ASCII 形式
+# ============================================================
+Edit|Write|MultiEdit	\b(nao|sao|coracao|estao|irmao|maos)\b|\b(fur|uber|ueber|fuer|loeschen|oeffnen|aendern|moegen|moeglich|natuerlich|fruehstueck|schoen|groesse|wuerde)\b|\b(francais|garcon|recu|apres|deja|tete|chateau|coeur|naive|cafe|cliche|facade|resume)\b|\b(senor|senorita|nina|manana|espanol|espana|pinata|jalapeno)\b|\b(soeur|reseau|frere|mere|pere)\b	warn	i18n-preserve-diacritics: 不准用 ASCII 替代 não/für/löschen 等;若是变量名/英文同形词,可忽略本告警

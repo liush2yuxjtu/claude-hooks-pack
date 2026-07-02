@@ -1,0 +1,23 @@
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Backup of replaced/retired source files we explicitly ship — keep them in
+# the repo for transparency, but ignore backup rotations the source box
+# produces.
+*.bak
+*.bak-*
+*.retired.bak
+
+# Anything an end-user might generate locally when running install.sh —
+# they should NOT be committed.
+settings.local.json
+settings.local.*.json
+
+# Test output
+test/output/
+test/.last-*
+*.test.log
