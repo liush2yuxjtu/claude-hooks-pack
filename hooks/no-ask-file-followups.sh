@@ -66,6 +66,7 @@ last_assistant="$(jq -rs '
 low="$(printf '%s' "$last_assistant" | tr '[:upper:]' '[:lower:]')"
 
 # (a) Is it a question? (CJK or ASCII question marker, or an explicit ask verb.)
+# shellcheck disable=SC2221,SC2222  # Pattern list is intentionally broad; early/late pattern order is irrelevant for any-match (OR) semantics.
 has_question=0
 case "$low" in
   *"?"*|*"？"*|*"吗"*|*"要不要"*|*"要我"*|*"需要我"*|*"shall i"*|*"should i"*|*"want me to"*|*"do you want"*|*"would you like"*)
@@ -88,6 +89,7 @@ if [[ "$about_followup" -eq 0 ]]; then
   case "$low" in
     *"issue"*|*"工单"*|*"ticket"*)
       case "$low" in
+        # shellcheck disable=SC2221,SC2222  # See note above: any-match semantics, no overlap concerns.
         *"残留"*|*"遗留"*|*" red"*|*"reds"*|*"the red"*|*" gap"*|*"gaps"*|*" e1"*|*" e5"*|*" e6"*|*"follow"*)
           about_followup=1 ;;
       esac ;;

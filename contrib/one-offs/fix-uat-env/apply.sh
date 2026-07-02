@@ -19,7 +19,7 @@ if [[ ! -d "$REPO" ]]; then
   exit 1
 fi
 
-cd "$REPO"
+cd "$REPO" || { echo "ERROR: cannot cd to $REPO" >&2; exit 1; }
 
 # --- Step 1: scripts/serve.sh forwards DEER_FLOW_AUTH_DISABLED_USER_EMAIL ---
 SERVESH="scripts/serve.sh"
