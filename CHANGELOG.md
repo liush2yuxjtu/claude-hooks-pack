@@ -6,6 +6,40 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/), but
 this project does **not** follow SemVer — commits are point-in-time snapshots of
 the source machine's `~/.claude/hooks/`, not versioned releases.
 
+## [unreleased] — tidy round 3 (2026-07-02)
+
+### Fixed (tech-debt: shellcheck warnings in active scripts)
+
+- **`hooks/meta-hook-creator.sh`** SC2088: `~/` literals in trigger patterns. Not a bug —
+  those literals are intentional user-facing trigger strings (the script matches
+  `~/.claude/hooks/` exactly as typed). Silence with `# shellcheck disable=SC2088` +
+  rationale comment.
+- **`hooks/no-ask-file-followups.sh`** SC2221/SC2222: pattern-list overlaps in two
+  `case` blocks. Not a bug — both blocks use any-match (OR) semantics; pattern order
+  is irrelevant. Silence with `# shellcheck disable=SC2221,SC2222` + rationale.
+- **`contrib/one-offs/fix-uat-env/apply.sh`** SC2164: bare `cd "$REPO"` without
+  `|| exit`. Real (small) fix: `cd "$REPO" || { echo "..."; exit 1; }` so the script
+  fails loudly instead of continuing from the wrong directory.
+
+### Known tech debt (NOT fixed in this round)
+
+These are pre-existing shellcheck warnings/info on scripts we didn't author;
+CI is configured to NOT fail on warnings/info (`shellcheck -S error` for
+active hooks). Tracked here so they don't get lost:
+
+- **`hooks/pair-chrome-soft-gate.sh:65`** — SC2019/SC2018/SC2016 (info-level):
+  `[A-Z]/[a-z]` character classes + single-quoted regex. Fix would be
+  `[[:upper:]]`/`[[:lower:]]` for unicode support, but this hook's triggers
+  are ASCII-only by design; switch is debatable.
+- **`hooks/reap-orphan-chrome.sh:69`** — same SC2019/SC2018/SC2016 trio.
+  Reason for keeping: same as pair-chrome-soft-gate.
+- **`hooks/_archive/learned-mistakes/{pop-open-on-ship,reap-orphan-chrome.solution,self-report-fused}.sh`**
+  — SC2034 (unused vars) and likely more. These scripts are intentionally
+  archived; not enforcing shellcheck on them.
+
+CI currently passes 5/5 jobs. To move any of these warnings to a green-only
+state, run `shellcheck <path>` locally and address each.
+
 ## [unreleased] — tidy round 1 (2026-07-02)
 
 ### Fixed (P0 — install/uninstall safety)

@@ -101,6 +101,7 @@ check "设计 hook"
 check "设计一个 hook"
 
 # ── File path / wiring 上下文 ──
+# shellcheck disable=SC2088  # Tilde DOES NOT expand in quotes: those `~/` literals are intentional user-facing trigger patterns
 check "~/.claude/hooks/"
 check "~/.claude/settings.json"
 check "HOOK_DESIGN_RUBRIC"
