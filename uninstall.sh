@@ -56,4 +56,14 @@ PACK_HOOKS="$PACK_DIR/hooks"
 [[ -f "$PACK_HOOKS/value-inject.sh"              ]] && rm -f "$TARGET_HOOKS/value-inject.sh"
 [[ -f "$PACK_HOOKS/winbrain-gitlab-push.sh"      ]] && rm -f "$TARGET_HOOKS/winbrain-gitlab-push.sh"
 
+# ── 3. Defensive cleanup of files from old install layouts ───────────
+# These are no longer installed by current install.sh, but users may still
+# have them in $HOME/.claude/hooks from a previous install round. Clean
+# them unconditionally so uninstall is a true zero state.
+log "==> defensive cleanup of archived + contrib files from old installs"
+for f in pop-open-on-ship.sh reap-orphan-chrome.solution.sh self-report-fused.sh.retired; do
+  [[ -f "$TARGET_HOOKS/$f" ]] && rm -f "$TARGET_HOOKS/$f"
+done
+[[ -d "$TARGET_HOOKS/fix-uat-env" ]] && rm -rf "$TARGET_HOOKS/fix-uat-env"
+
 log "==> done. Re-login / restart claude-code to pick up changes."

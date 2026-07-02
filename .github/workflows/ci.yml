@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Run shellcheck
+        run: |
+          set -euo pipefail
+          shellcheck -x install.sh uninstall.sh bin/build-fragment.sh
+          shellcheck hooks/*.sh contrib/one-offs/fix-uat-env/*.sh hooks/_archive/learned-mistakes/*.sh
+
+  json-validate:
+    name: json-validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate settings fragment is JSON
+        run: python3 -c "import json; json.load(open('settings/hooks.fragment.json'))"
+
+  bash-test:
+    name: bash-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run straight-fix-no-ask test
+        run: bash test/straight-fix-no-ask.test.sh
+      - name: Run fix-uat-env test (if present)
+        run: |
+          if [[ -x contrib/one-offs/fix-uat-env/test.sh ]]; then
+            bash contrib/one-offs/fix-uat-env/test.sh
+          fi
+        continue-on-error: true
+
+  install-dryrun:
+    name: install dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bash syntax check
+        run: bash -n install.sh uninstall.sh bin/build-fragment.sh
+      - name: Dry-run install (no settings)
+        run: |
+          set -euo pipefail
+          export HOME="$RUNNER_TEMP/home"
+          mkdir -p "$HOME"
+          bash install.sh --dry-run --no-settings 2>&1 | tee install-dryrun.log
+          # Validate the dry run produced the expected log line shape
+          grep -q 'dry-run' install-dryrun.log
+      - name: Uninstall dry-run
+        run: bash uninstall.sh 2>&1 | head -20
