@@ -1,0 +1,32 @@
+repos:
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        name: shellcheck (install + hooks)
+        files: '^(hooks|install\.sh|uninstall\.sh|bin/.*\.sh|contrib/.*\.sh)\.sh$'
+
+  - repo: https://github.com/luismayta/pre-commit-shell
+    rev: v1.0.5
+    hooks:
+      - id: shfmt-docker
+        name: shfmt (install + hooks)
+        files: '^(hooks|install\.sh|uninstall\.sh|bin/.*\.sh|contrib/.*\.sh)\.sh$'
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=512']
+      - id: check-merge-conflict
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: ['--strict']

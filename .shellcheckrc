@@ -1,0 +1,16 @@
+# shellcheck configuration for claude-hooks-pack
+# Reference: https://github.com/koalaman/shellcheck/blob/main/shellcheck.1.md#rc-files
+
+# Disable "Can't follow non-constant source" — most hooks source lib files
+# that CI doesn't have on PATH. We don't want that to be a CI error.
+disable=SC1090,SC1091
+
+# Treat unused variables as errors (default already warns; promote).
+# shellcheck default severity for SC2034 is "info"; promote via enable below.
+
+# Enable add-variables-to-quotes as a warning so we catch unquoted expansions
+# during code review.
+enable=quote-add-variables,deprecate-which
+
+# Severity: only show style+info+warning; treat "info" as warnings.
+severity=style
