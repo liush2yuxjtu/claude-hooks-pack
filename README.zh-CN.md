@@ -1,6 +1,10 @@
 # claude-hooks-pack(中文)
 
-> 27 个用户级 Claude Code hook 的可分发包(5 个生命周期事件)+ 设计规范 + 一键安装/卸载脚本。
+[![CI](https://github.com/liush2yuxjtu/claude-hooks-pack/actions/workflows/ci.yml/badge.svg)](https://github.com/liush2yuxjtu/claude-hooks-pack/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Hooks: 26 active](https://img.shields.io/badge/hooks-26%20active-success)](hooks/)
+
+> 26 个用户级 Claude Code hook 的可分发包(5 个生命周期事件)+ 设计规范 + 一键安装/卸载脚本。
 >
 > English version: [README.md](./README.md)
 
@@ -10,7 +14,7 @@
 
 把 `~/.claude/hooks/`(本机上的用户级 Claude Code hooks 目录)原样打包,任何 macOS / Linux 机器克隆后跑 `bash install.sh` 就能在 2 分钟内恢复全部 hook 接线(`~/.claude/settings.json` 里的 `hooks{}` 块)。
 
-**包含 27 个 active hook + 3 个 dormant hook + 1 个子包(`fix-uat-env/`)+ 设计文档。**
+**包含 26 个 active hook + 3 个 archived hook(`hooks/_archive/learned-mistakes/`,只供学习)+ 1 个 contrib 一次性包(`contrib/one-offs/fix-uat-env/`,不默认安装)+ 设计文档。**
 
 ## 安装
 
@@ -42,34 +46,44 @@ bash uninstall.sh
 
 ```
 claude-hooks-pack/
-├── README.md / README.zh-CN.md   # 双语 README
-├── LICENSE                        # MIT
-├── install.sh / uninstall.sh     # 一键装/卸
-├── hooks/                         # 27 active + 3 dormant + 1 子包
+├── README.md / README.zh-CN.md       # 双语 README
+├── LICENSE                            # MIT
+├── CHANGELOG.md / CONTRIBUTING.md    # 历史 / 新 hook 提交规范(rubric §8)
+├── install.sh / uninstall.sh         # 一键装/卸,带 fragment 验证 + defensive cleanup
+├── bin/build-fragment.sh             # 在 SOURCE 机器跑一次,生成真实 fragment
+├── hooks/                             # 26 active(顶层 .sh + .py)
 │   ├── 4-fast-rule.sh / capture-session-name.py / clash-mode-guard.sh
 │   ├── done-find-downloads.sh / fast-iteration-inject.sh / finish-not-defer.sh
-│   ├── fix-uat-env/               # 子包(hook.sh + apply.sh + test.sh + README.md)
 │   ├── followup-not-ask.sh / followup-spawn-agents.sh / force-playwright-cli.sh
 │   ├── guard.sh / honest-report-gate.sh / keep-going.sh / meta-hook-creator.sh
 │   ├── mocks-not-stuck-reminder.sh / no-ask-file-followups.sh
 │   ├── pair-chrome-soft-gate.sh / playwright-headless.sh
-│   ├── pop-open-on-ship.sh        [dormant]
-│   ├── reap-orphan-chrome.sh / reap-orphan-chrome.solution.sh [dormant, reference]
-│   ├── research-md-no-ask.sh / self-report-fused.sh.retired [dormant]
-│   ├── selfhost-browser-no-ask.sh / spawn-not-ask.sh
+│   ├── reap-orphan-chrome.sh          # 裸版,只指向 .solution.sh 作为手动修复
+│   ├── research-md-no-ask.sh / selfhost-browser-no-ask.sh / spawn-not-ask.sh
 │   ├── straight-fix-no-ask.sh / value-guard-next-step.sh
 │   ├── value-guard.sh / value-inject.sh / winbrain-gitlab-push.sh
+├── hooks/_archive/learned-mistakes/   # 3 archived(不安装,仅教学)
+│   ├── INDEX.md                        # 每个归档的事故说明
+│   ├── pop-open-on-ship.sh
+│   ├── reap-orphan-chrome.solution.sh
+│   └── self-report-fused.sh.retired
+├── contrib/one-offs/fix-uat-env/     # 一次性事故修复(不默认安装)
+│   ├── TOP-NOTE.md / README.md / apply.sh / hook.sh / test.sh
 ├── docs/
-│   ├── HOOK_DESIGN_RUBRIC.md     # 设计规范(8 章 + 8 题自检)
-│   └── value-guard-template.md   # VALUE-cascade 提示词模板
-├── settings/hooks.fragment.json  # 要合进 settings.json 的 hooks 块
-├── data/redlines.tsv             # guard.sh 用的 redline 表
-└── test/straight-fix-no-ask.test.sh  # §5 规范的测试 harness
+│   ├── HOOK_DESIGN_RUBRIC.md         # 设计规范(8 章 + 8 题自检)
+│   └── value-guard-template.md       # VALUE-cascade 提示词模板
+├── settings/hooks.fragment.json      # 要合进 settings.json 的 hooks 块(出厂是 all-null)
+├── data/redlines.tsv                 # guard.sh 用的 redline 表
+├── test/straight-fix-no-ask.test.sh  # §5 规范的测试 harness
+└── .github/
+    ├── workflows/ci.yml               # shellcheck + JSON 校验 + bash test + install dry-run
+    ├── ISSUE_TEMPLATE/{bug_report,feature_request}.md
+    └── PULL_REQUEST_TEMPLATE.md
 ```
 
 ---
 
-## 27 个 active hook 速查表
+## 26 个 active hook 速查表
 
 > 想让 LLM 帮你逐个解释 + 选择性安装?直接复制下面这段提示词发给它:
 
@@ -89,7 +103,7 @@ claude-hooks-pack/
 |---|---|
 | 内联 `echo` | 给 spawn 的子 agent 注入 `CLAUDE_REDLINE_ENFORCE=1` 环境变量 |
 
-### UserPromptSubmit(10)— 你每次发消息时触发
+### UserPromptSubmit(9)— 你每次发消息时触发
 
 | Hook | 触发条件 | 作用 |
 |---|---|---|
@@ -102,7 +116,6 @@ claude-hooks-pack/
 | `reap-orphan-chrome.sh` | 关键词 | 指针:孤儿 Chrome 让 agent 跑 `reap-orphan-chrome.solution.sh` |
 | `pair-chrome-soft-gate.sh` | 浏览器 / UAT / 可见 Chrome | 软提示:走 headless `playwright-cli` |
 | `done-find-downloads.sh` | "Done / Finished / 搞定" | 把 `~/Downloads` 最新变动拉到本轮上下文 |
-| `fix-uat-env/hook.sh` | UAT / 修环境场景 | 子包:自动修复坏掉的 UAT 环境变量 |
 
 ### PreToolUse(5)— 每次调用工具前触发
 
@@ -131,18 +144,41 @@ claude-hooks-pack/
 
 ---
 
-## 没接线的 3 个 dormant hook(默认不启用)
+## Archived (不安装;仅学习用)
 
-- `pop-open-on-ship.sh` — 2026-06 因 wrong-Chrome 自动弹窗体验问题主动 unwire
-- `reap-orphan-chrome.solution.sh` — 参考脚本(非 hook 本身),agent 触发后手动跑
-- `self-report-fused.sh.retired` — 已被 `value-guard*.sh` 家族取代
+移到 `hooks/_archive/learned-mistakes/`(每个归档有 `INDEX.md` 说明事故)。`install.sh` 现在排除 `*.retired`、`*.solution`、`*.archive.*`,所以**绝对不会拷到用户机器**。要复活就 `git mv` 回 `hooks/` + 在 `settings/hooks.fragment.json` 加一项。
+
+- **`pop-open-on-ship.sh`** — wrong-Chrome 自动弹窗痛(2026-06-xx)。已被手动 `pair-chrome pop-open` 取代。
+- **`reap-orphan-chrome.solution.sh`** — 参考脚本。裸 hook `reap-orphan-chrome.sh` 只指向它做手动修复,绝不自动跑。
+- **`self-report-fused.sh.retired`** — always-on VALUE 提醒被所有 hook 噪声吞掉。被 `value-guard*.sh`(scope 到"下一步"/"要不要")取代。
+
+## Contrib one-offs(不默认安装;项目或事故专用)
+
+- **`contrib/one-offs/fix-uat-env/`** — `win_brain` UAT 环境一次性修复(冻结)。自带 `TOP-NOTE.md` 说明事故 + 可移植性。`install.sh` 不装 — 见 [CONTRIBUTING.md](./CONTRIBUTING.md#one-off-contribs) 了解如何启用。
+
+## 第一次使用:在源机器上生成 fragment
+
+出厂的 `settings/hooks.fragment.json` 是故意的 all-null(占位,不是数据丢失)。在 **SOURCE 机器** 上这样填:
+
+```bash
+# 在 ~/.claude/settings.json 真正接线的机器上跑一次:
+bash bin/build-fragment.sh > settings/hooks.fragment.json
+
+# 提交 + 推。其他机器的 install.sh 才有真东西可合(不会 abort)。
+git add settings/hooks.fragment.json
+git commit -m "frag: extract real hooks block from source machine"
+git push
+```
+
+如果你不填 fragment 就 `bash install.sh`,install 会拷所有 hook 文件但 **abort 合并步骤**,给出明确的指引(就是上一段)。
 
 ## 设计参考
 
 - `docs/HOOK_DESIGN_RUBRIC.md` — 8 章规范 + 8 题自检,新 hook 必过
 - `docs/value-guard-template.md` — VALUE 级联(root → L1-L4 → 7 leaves)提示词模板
 - `data/redlines.tsv` — `guard.sh` 消费的 redline 表(TSV:`tool<TAB>regex<TAB>action<TAB>reason`)
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — 新 hook 的 rubric §8 清单 + 本地开发步骤
 
-## License
+## Development / License
 
-MIT,详见 `LICENSE`。
+历史见 [CHANGELOG.md](./CHANGELOG.md)。License: MIT,详见 `LICENSE`。
