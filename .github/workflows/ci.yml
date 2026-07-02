@@ -33,6 +33,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install hooks under runner HOME (no settings merge)
+        run: |
+          set -euo pipefail
+          export HOME="$RUNNER_TEMP/home"
+          mkdir -p "$HOME"
+          bash install.sh --no-settings
       - name: Run straight-fix-no-ask test
         run: bash test/straight-fix-no-ask.test.sh
       - name: Run fix-uat-env test (if present)
