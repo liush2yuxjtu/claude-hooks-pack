@@ -110,7 +110,7 @@ Skill)
 
 mcp__plugin_playwright_playwright__* | mcp__plugin_chrome-devtools-mcp_chrome-devtools__*)
   payload=$(jq -c '.tool_input // {}' <<<"$input" 2>/dev/null || echo "")
-  if grep -qE '"(headless|headed)"[[:space:]]*:[[:space:]]*false' <<<"$payload"; then
+  if grep -qE '"headless"[[:space:]]*:[[:space:]]*false|"headed"[[:space:]]*:[[:space:]]*true' <<<"$payload"; then
     inject "MCP payload headless:false" "$payload" \
       "[playwright-headless soft-gate · NOT a block] This MCP browser payload sets headless:false / headed:true → a VISIBLE browser. User rule: prefer HEADLESS. Drop that key (prefer the headless /playwright-cli skill). Proceeding; correct it unless a visible browser was explicitly requested."
   fi
