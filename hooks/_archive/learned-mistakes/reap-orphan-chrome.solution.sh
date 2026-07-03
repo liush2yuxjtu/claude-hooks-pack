@@ -49,40 +49,69 @@
 
 set -uo pipefail
 
-DRYRUN=0; RELAUNCH=0; AGGRESSIVE="${CLAUDE_REAP_CHROME_AGGRESSIVE:-0}"; AGE="${CLAUDE_REAP_CHROME_AGE:-1800}"
+DRYRUN=0
+RELAUNCH=0
+AGGRESSIVE="${CLAUDE_REAP_CHROME_AGGRESSIVE:-0}"
+AGE="${CLAUDE_REAP_CHROME_AGE:-1800}"
 [[ "${CLAUDE_REAP_CHROME_DISABLED:-0}" == "1" ]] && DRYRUN=1
 while [ $# -gt 0 ]; do
   case "$1" in
-    --dry-run|--diagnose-only) DRYRUN=1;;
-    --relaunch) RELAUNCH=1;;
-    --aggressive) AGGRESSIVE=1;;
-    --age) shift; AGE="${1:-1800}";;
-    *) echo "unknown flag: $1" >&2;;
-  esac; shift
+  --dry-run | --diagnose-only) DRYRUN=1 ;;
+  --relaunch) RELAUNCH=1 ;;
+  --aggressive) AGGRESSIVE=1 ;;
+  --age)
+    shift
+    AGE="${1:-1800}"
+    ;;
+  *) echo "unknown flag: $1" >&2 ;;
+  esac
+  shift
 done
 
 CHROME_MAIN="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-LOG_DIR="$HOME/.claude/hooks/logs"; mkdir -p "$LOG_DIR" 2>/dev/null || true
+LOG_DIR="$HOME/.claude/hooks/logs"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
 LOG_FILE="$LOG_DIR/reap-orphan-chrome.jsonl"
 TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 audit() { # action pid detail
   if command -v jq >/dev/null 2>&1; then
     jq -nc --arg ts "$TS" --arg action "$1" --arg pid "${2:-}" --arg detail "${3:-}" \
-      '{ts:$ts,hook:"reap-orphan-chrome-solution",action:$action,pid:$pid,detail:$detail}' >> "$LOG_FILE" 2>/dev/null || true
+      '{ts:$ts,hook:"reap-orphan-chrome-solution",action:$action,pid:$pid,detail:$detail}' >>"$LOG_FILE" 2>/dev/null || true
   else
     printf '{"ts":"%s","hook":"reap-orphan-chrome-solution","action":"%s","pid":"%s","detail":"%s"}\n' \
-      "$TS" "$1" "${2:-}" "${3:-}" >> "$LOG_FILE" 2>/dev/null || true
+      "$TS" "$1" "${2:-}" "${3:-}" >>"$LOG_FILE" 2>/dev/null || true
   fi
 }
 ppid_of() { ps -p "$1" -o ppid= 2>/dev/null | tr -d ' '; }
-cmd_of()  { ps -p "$1" -o command= 2>/dev/null; }
+cmd_of() { ps -p "$1" -o command= 2>/dev/null; }
 etime_secs() {
-  local e; e="$(ps -p "$1" -o etime= 2>/dev/null | tr -d ' ')"; [ -z "$e" ] && { echo 0; return; }
-  local days=0 hms="$e"; case "$e" in *-*) days="${e%%-*}"; hms="${e#*-}";; esac
-  local IFS=:; set -- $hms; local h=0 m=0 s=0
-  case $# in 3) h=$1;m=$2;s=$3;; 2) m=$1;s=$2;; 1) s=$1;; esac
-  echo $(( 10#${days:-0}*86400 + 10#${h:-0}*3600 + 10#${m:-0}*60 + 10#${s:-0} ))
+  local e
+  e="$(ps -p "$1" -o etime= 2>/dev/null | tr -d ' ')"
+  [ -z "$e" ] && {
+    echo 0
+    return
+  }
+  local days=0 hms="$e"
+  case "$e" in *-*)
+    days="${e%%-*}"
+    hms="${e#*-}"
+    ;;
+  esac
+  local IFS=:
+  set -- $hms
+  local h=0 m=0 s=0
+  case $# in 3)
+    h=$1
+    m=$2
+    s=$3
+    ;;
+  2)
+    m=$1
+    s=$2
+    ;;
+  1) s=$1 ;; esac
+  echo $((10#${days:-0} * 86400 + 10#${h:-0} * 3600 + 10#${m:-0} * 60 + 10#${s:-0}))
 }
 
 echo "════════════════════════════════════════════════════════════════"
@@ -96,21 +125,32 @@ printf "%-8s %-8s %-26s %s\n" "----" "----" "----" "----"
 reapable=()
 while IFS= read -r pid; do
   [ -z "$pid" ] && continue
-  cmd="$(cmd_of "$pid")"; [ -z "$cmd" ] && continue
-  case "$cmd" in *"$CHROME_MAIN"*) ;; *) continue;; esac
-  pp="$(ppid_of "$pid")"; short="$(printf '%s' "$cmd" | sed "s#$CHROME_MAIN#Chrome#" | cut -c1-58)"
-  klass="" ; reason=""
-  if printf '%s' "$cmd" | grep -q "Google Chrome for Testing"; then klass="for-testing(跳过)"
-  elif printf '%s' "$cmd" | grep -q ".claude/chrome-profiles"; then klass="pair-chrome(保护)"
-  elif ! printf '%s' "$cmd" | grep -q -- "--headless"; then klass="daily-gui(保护)"
+  cmd="$(cmd_of "$pid")"
+  [ -z "$cmd" ] && continue
+  case "$cmd" in *"$CHROME_MAIN"*) ;; *) continue ;; esac
+  pp="$(ppid_of "$pid")"
+  short="$(printf '%s' "$cmd" | sed "s#$CHROME_MAIN#Chrome#" | cut -c1-58)"
+  klass=""
+  reason=""
+  if printf '%s' "$cmd" | grep -q "Google Chrome for Testing"; then
+    klass="for-testing(跳过)"
+  elif printf '%s' "$cmd" | grep -q ".claude/chrome-profiles"; then
+    klass="pair-chrome(保护)"
+  elif ! printf '%s' "$cmd" | grep -q -- "--headless"; then
+    klass="daily-gui(保护)"
   else
     # headless — orphan?
-    if [ "$pp" = "1" ]; then klass="headless-orphan✗"; reason="orphaned-to-launchd"
+    if [ "$pp" = "1" ]; then
+      klass="headless-orphan✗"
+      reason="orphaned-to-launchd"
     else
-      gpp="$(ppid_of "$pp")"; pcmd="$(cmd_of "$pp" || true)"
+      gpp="$(ppid_of "$pp")"
+      pcmd="$(cmd_of "$pp" || true)"
       if [ "$gpp" = "1" ] && printf '%s' "$pcmd" | grep -qiE 'playwright|node'; then
         age="$(etime_secs "$pid")"
-        if [ "$AGGRESSIVE" = 1 ] || [ "$age" -ge "$AGE" ]; then klass="headless-orphan✗"; reason="orphaned-playwright-ctrl(${age}s)"
+        if [ "$AGGRESSIVE" = 1 ] || [ "$age" -ge "$AGE" ]; then
+          klass="headless-orphan✗"
+          reason="orphaned-playwright-ctrl(${age}s)"
         else klass="headless-live(跳过 ${age}s<${AGE})"; fi
       else klass="headless-live(跳过)"; fi
     fi
@@ -127,12 +167,20 @@ if [ "${#reapable[@]}" -eq 0 ]; then
 else
   echo "→ 发现 ${#reapable[@]} 个孤儿 headless Chrome:"
   for entry in "${reapable[@]}"; do
-    pid="${entry%%|*}"; reason="${entry#*|}"
+    pid="${entry%%|*}"
+    reason="${entry#*|}"
     if [ "$DRYRUN" = 1 ]; then
-      echo "   [dry-run] 将清理 PID $pid ($reason)"; audit "would-reap" "$pid" "$reason"
+      echo "   [dry-run] 将清理 PID $pid ($reason)"
+      audit "would-reap" "$pid" "$reason"
     else
-      if kill "$pid" 2>/dev/null; then echo "   ✓ 已清理 PID $pid ($reason)"; reaped=$((reaped+1)); audit "reaped-chrome" "$pid" "$reason"
-      else echo "   ✗ kill 失败 PID $pid"; audit "kill-failed" "$pid" "$reason"; fi
+      if kill "$pid" 2>/dev/null; then
+        echo "   ✓ 已清理 PID $pid ($reason)"
+        reaped=$((reaped + 1))
+        audit "reaped-chrome" "$pid" "$reason"
+      else
+        echo "   ✗ kill 失败 PID $pid"
+        audit "kill-failed" "$pid" "$reason"
+      fi
     fi
   done
   [ "$reaped" -gt 0 ] && audit "summary" "" "reaped $reaped"
@@ -144,7 +192,7 @@ if [ "$RELAUNCH" = 1 ] && [ "$DRYRUN" = 0 ]; then
   has_default=0
   while IFS= read -r pid; do
     cmd="$(cmd_of "$pid")"
-    case "$cmd" in *"$CHROME_MAIN"*) ;; *) continue;; esac
+    case "$cmd" in *"$CHROME_MAIN"*) ;; *) continue ;; esac
     printf '%s' "$cmd" | grep -q -- "--headless" && continue
     printf '%s' "$cmd" | grep -q ".claude/chrome-profiles" && continue
     printf '%s' "$cmd" | grep -q "Google Chrome for Testing" && continue

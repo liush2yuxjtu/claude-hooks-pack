@@ -116,39 +116,39 @@ done
 extract() {
   # BSD-grep-compatible: use [[:graph:]] (printable non-space) instead of
   # a hand-rolled negated class containing quote chars.
-  printf '%s\n' "$last_message" \
-    | grep -oE 'https?://[[:graph:]]+' \
-    | sed -E 's/[.,;:!?]+$//' \
-    | awk '!seen[$0]++'
+  printf '%s\n' "$last_message" |
+    grep -oE 'https?://[[:graph:]]+' |
+    sed -E 's/[.,;:!?]+$//' |
+    awk '!seen[$0]++'
 }
 
 extract_local_files() {
   # file:// URLs
-  printf '%s\n' "$last_message" \
-    | grep -oE 'file://[[:graph:]]+' \
-    | sed -E 's/[.,;:!?]+$//'
+  printf '%s\n' "$last_message" |
+    grep -oE 'file://[[:graph:]]+' |
+    sed -E 's/[.,;:!?]+$//'
 
   # Absolute or home-relative paths ending in known deliverable extensions.
   # Require the leading slash NOT to be preceded by ':' so we don't grab
   # the path out of https://example.com/foo.html.
-  printf '%s\n' "$last_message" \
-    | grep -oE '(^|[^[:alnum:]_:./])(/|~)[A-Za-z0-9_./-]+\.(html|md|json|pdf)' \
-    | sed -E 's/^[^A-Za-z0-9_/.~]+//' \
-    | sed -E 's/[.,;:!?]+$//'
+  printf '%s\n' "$last_message" |
+    grep -oE '(^|[^[:alnum:]_:./])(/|~)[A-Za-z0-9_./-]+\.(html|md|json|pdf)' |
+    sed -E 's/^[^A-Za-z0-9_/.~]+//' |
+    sed -E 's/[.,;:!?]+$//'
 
   # Relative paths starting with ./ or ../ + extension (the ./ or ../ must
   # be at a word boundary, not inside a URL).
-  printf '%s\n' "$last_message" \
-    | grep -oE '(^|[^[:alnum:]_:./])\.{1,2}/[A-Za-z0-9_./-]+\.(html|md|json|pdf)' \
-    | sed -E 's/^[^A-Za-z0-9_/.~]+//' \
-    | sed -E 's/[.,;:!?]+$//'
+  printf '%s\n' "$last_message" |
+    grep -oE '(^|[^[:alnum:]_:./])\.{1,2}/[A-Za-z0-9_./-]+\.(html|md|json|pdf)' |
+    sed -E 's/^[^A-Za-z0-9_/.~]+//' |
+    sed -E 's/[.,;:!?]+$//'
 
   # Paths inside dist/, out/, build/ (absolute, home, or ./ relative).
   # Same non-URL boundary rule.
-  printf '%s\n' "$last_message" \
-    | grep -oE '(^|[^[:alnum:]_:./])(/|~|\.{1,2}/)[A-Za-z0-9_./-]*/(dist|out|build)/[A-Za-z0-9_./-]+' \
-    | sed -E 's/^[^A-Za-z0-9_/.~]+//' \
-    | sed -E 's/[.,;:!?]+$//'
+  printf '%s\n' "$last_message" |
+    grep -oE '(^|[^[:alnum:]_:./])(/|~|\.{1,2}/)[A-Za-z0-9_./-]*/(dist|out|build)/[A-Za-z0-9_./-]+' |
+    sed -E 's/^[^A-Za-z0-9_/.~]+//' |
+    sed -E 's/[.,;:!?]+$//'
 }
 
 urls="$(extract | head -n 20)"
@@ -197,18 +197,18 @@ open_one() {
       --no-first-run \
       --disable-background-networking \
       --new-window \
-      "$target" >/dev/null 2>&1 \
-      && opened+=("$kind: $target") \
-      || failed+=("$kind: $target")
+      "$target" >/dev/null 2>&1 &&
+      opened+=("$kind: $target") ||
+      failed+=("$kind: $target")
   elif [[ "$kind" == "url" ]]; then
-    open "$target" >/dev/null 2>&1 \
-      && opened+=("$kind: $target") \
-      || failed+=("$kind: $target")
-  else  # file
+    open "$target" >/dev/null 2>&1 &&
+      opened+=("$kind: $target") ||
+      failed+=("$kind: $target")
+  else # file
     # Pass through verbatim — `open` accepts both bare paths and file:// URLs.
-    open "$target" >/dev/null 2>&1 \
-      && opened+=("$kind: $target") \
-      || failed+=("$kind: $target")
+    open "$target" >/dev/null 2>&1 &&
+      opened+=("$kind: $target") ||
+      failed+=("$kind: $target")
   fi
 }
 
@@ -221,7 +221,7 @@ if [[ -n "$urls" ]]; then
     else
       open_one "url" "$u"
     fi
-  done <<< "$urls"
+  done <<<"$urls"
 fi
 
 # --- Open local files ---
@@ -229,7 +229,7 @@ if [[ -n "$files" ]]; then
   while IFS= read -r f; do
     [[ -z "$f" ]] && continue
     open_one "file" "$f"
-  done <<< "$files"
+  done <<<"$files"
 fi
 
 # --- Summary on stdout ---

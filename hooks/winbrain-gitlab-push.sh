@@ -60,8 +60,8 @@ cwd=$(jq -r '.cwd // ""' <<<"$input" 2>/dev/null || echo "")
 
 # Scope: win_brain project only (path-based; the local checkout dir is winbrain9).
 case "$cwd" in
-  *winbrain*|*win_brain*) : ;;
-  *) exit 0 ;;
+*winbrain* | *win_brain*) : ;;
+*) exit 0 ;;
 esac
 
 # Only care about a `git push`.
@@ -73,9 +73,10 @@ grep -qE 'gitlab008\.its\.winchannel\.net|git[[:space:]]+push[[:space:]]+(-[^[:s
 # Already using the relay forward (the fixed form) → allow.
 grep -qE '127\.0\.0\.1:8080|localhost:8080|ssh[[:space:]].*-L[[:space:]]*8080' <<<"$cmd" && exit 0
 
-LOG_DIR="$HOME/.claude/hooks/logs"; mkdir -p "$LOG_DIR" 2>/dev/null || true
+LOG_DIR="$HOME/.claude/hooks/logs"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
 jq -nc --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg cmd "$cmd" \
-  '{ts:$ts,verdict:"block",cmd:$cmd}' >> "$LOG_DIR/winbrain-gitlab-push.jsonl" 2>/dev/null || true
+  '{ts:$ts,verdict:"block",cmd:$cmd}' >>"$LOG_DIR/winbrain-gitlab-push.jsonl" 2>/dev/null || true
 
 cat >&2 <<'EOF'
 🛑 winbrain-gitlab-push.sh: BLOCK — naive `git push` to win_brain's internal GitLab will fail.

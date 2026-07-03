@@ -68,10 +68,14 @@ SESSION_ID="$(extract_field session_id)"
 # Lowercase + strip fenced AND inline code so pasted logs / quoted strings don't false-fire.
 norm="$(printf '%s' "$PROMPT" | tr 'A-Z' 'a-z' | sed -e 's/```[^`]*```/ /g' -e 's/`[^`]*`/ /g')"
 
-contains() { case "$norm" in *"$1"*) return 0;; *) return 1;; esac; }
-contains_any() { local t; for t in "$@"; do contains "$t" && return 0; done; return 1; }
+contains() { case "$norm" in *"$1"*) return 0 ;; *) return 1 ;; esac }
+contains_any() {
+  local t
+  for t in "$@"; do contains "$t" && return 0; done
+  return 1
+}
 
-BROWSER_TOKENS=( "chrome" "谷歌浏览器" "谷歌瀏覽器" "google chrome" "浏览器" "瀏覽器" )
+BROWSER_TOKENS=("chrome" "谷歌浏览器" "谷歌瀏覽器" "google chrome" "浏览器" "瀏覽器")
 FAILURE_TOKENS=(
   "打不开" "打不開" "打不开了" "开不了" "開不了" "开不起来" "啟動不了" "启动不了"
   "起不来" "起不來" "没反应" "沒反應" "没反映" "无法打开" "無法打開" "无法启动"
@@ -88,7 +92,8 @@ EXPLICIT_TOKENS=(
   "孤儿 chrome" "孤兒 chrome" "/reap-chrome" "reap-orphan-chrome"
 )
 
-TRIGGER=""; MATCHED=""
+TRIGGER=""
+MATCHED=""
 if contains_any "${EXPLICIT_TOKENS[@]}"; then
   TRIGGER="explicit"
   for t in "${EXPLICIT_TOKENS[@]}"; do contains "$t" && MATCHED="$MATCHED${MATCHED:+,}$t"; done
@@ -102,19 +107,20 @@ fi
 [ -z "$TRIGGER" ] && exit 0
 
 # ── audit + per-session note ────────────────────────────────────────────────────
-LOG_DIR="$HOME/.claude/hooks/logs"; mkdir -p "$LOG_DIR" 2>/dev/null || true
+LOG_DIR="$HOME/.claude/hooks/logs"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
 LOG_FILE="$LOG_DIR/reap-orphan-chrome.jsonl"
 SESSION_LOG="$LOG_DIR/reap-orphan-chrome-${SESSION_ID:-nosession}.md"
 TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 if command -v jq >/dev/null 2>&1; then
   jq -nc --arg ts "$TS" --arg sid "${SESSION_ID:-}" --arg markers "$MATCHED" --arg detail "$TRIGGER" \
     '{ts:$ts,session_id:$sid,hook:"reap-orphan-chrome",action:"pointer-injected",markers_found:$markers,detail:$detail}' \
-    >> "$LOG_FILE" 2>/dev/null || true
+    >>"$LOG_FILE" 2>/dev/null || true
 else
   printf '{"ts":"%s","hook":"reap-orphan-chrome","action":"pointer-injected","markers_found":"%s","detail":"%s"}\n' \
-    "$TS" "$MATCHED" "$TRIGGER" >> "$LOG_FILE" 2>/dev/null || true
+    "$TS" "$MATCHED" "$TRIGGER" >>"$LOG_FILE" 2>/dev/null || true
 fi
-printf -- '- %s  trigger=%s  markers=[%s]\n' "$TS" "$TRIGGER" "$MATCHED" >> "$SESSION_LOG" 2>/dev/null || true
+printf -- '- %s  trigger=%s  markers=[%s]\n' "$TS" "$TRIGGER" "$MATCHED" >>"$SESSION_LOG" 2>/dev/null || true
 
 # ── inject agent-facing note (UserPromptSubmit stdout → additionalContext) ───────
 # User-invisible. Tells the agent there is a known issue + a reference script/solution.

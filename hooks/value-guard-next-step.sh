@@ -139,21 +139,21 @@ TRIGGERS=(
 #           字面词条全 miss。用 [^。!?\n]* 在同一句内跨字匹配,
 #           遇句末标点/换行即止,避免跨句误报。
 REGEXES=(
-  "要我[^。!?？!\n]*吗"                       # 要我继续…体检吗 / 要我帮你…吗
-  "让我[^。!?？!\n]*吗"                       # 让我先…吗
-  "需要[^。!?？!\n]*吗"                       # 需要我…吗
-  "可以[^。!?？!\n]*吗"                       # 可以这样…吗 / 可以吗
-  "要不要[^。!?？!\n]*"                       # 要不要我…(做)
-  "是否[^。!?？!\n]*(继续|要|做|同意|可以|需要)"   # 是否要继续…
-  "你来[^。!?？!\n]*(做|弄|贴|点|跑|手|改|看)"      # 你来…点一下
-  "(告诉我|让我知道)[^。!?？!\n]*(即可|就行|哪个|选)"  # 选好告诉我即可 / 哪个就告诉我
+  "要我[^。!?？!\n]*吗"                    # 要我继续…体检吗 / 要我帮你…吗
+  "让我[^。!?？!\n]*吗"                    # 让我先…吗
+  "需要[^。!?？!\n]*吗"                    # 需要我…吗
+  "可以[^。!?？!\n]*吗"                    # 可以这样…吗 / 可以吗
+  "要不要[^。!?？!\n]*"                    # 要不要我…(做)
+  "是否[^。!?？!\n]*(继续|要|做|同意|可以|需要)"    # 是否要继续…
+  "你来[^。!?？!\n]*(做|弄|贴|点|跑|手|改|看)"    # 你来…点一下
+  "(告诉我|让我知道)[^。!?？!\n]*(即可|就行|哪个|选)" # 选好告诉我即可 / 哪个就告诉我
   # ── 条件式 offer(无问号也算): "需要我…的话/可以" "否则…完成态" ──
-  "需要我[^。!?？!\n]*(的话|可以|继续|接着|再)"         # 需要我接着做的话 / 需要我继续可以
-  "要我[^。!?？!\n]*(的话|接着|继续)"                  # 要我接着扫的话
-  "(如果|若|如)[^。!?？!\n]*需要[^。!?？!\n]*(我|可以)"  # 如果需要我可以
-  "否则[^。!?？!\n]*(完成|就是|可以演示|完成态)"         # 否则这就是…完成态
+  "需要我[^。!?？!\n]*(的话|可以|继续|接着|再)"          # 需要我接着做的话 / 需要我继续可以
+  "要我[^。!?？!\n]*(的话|接着|继续)"                # 要我接着扫的话
+  "(如果|若|如)[^。!?？!\n]*需要[^。!?？!\n]*(我|可以)" # 如果需要我可以
+  "否则[^。!?？!\n]*(完成|就是|可以演示|完成态)"          # 否则这就是…完成态
   "可以[^。!?？!\n]*(一次扫|接着做|继续做|帮你)"          # 可以一次扫掉 / 可以接着做
-  "(想|要)[^。!?？!\n]*继续[^。!?？!\n]*的话"            # 想继续的话 / 要继续的话
+  "(想|要)[^。!?？!\n]*继续[^。!?？!\n]*的话"        # 想继续的话 / 要继续的话
 )
 
 for t in "${TRIGGERS[@]}"; do
@@ -172,18 +172,18 @@ done
 
 # checkbox 形态: ≥ 3 行 "- ☐ "
 checkbox_count="$(printf '%s' "$last_msg" | grep -cE '^- ☐ ' || true)"
-if (( checkbox_count >= 3 )); then
+if ((checkbox_count >= 3)); then
   markers_found=$((markers_found + 1))
   matched+=("☐×${checkbox_count}")
 fi
 
 # ── 命中: 追加 scolding block 到 per-session reminder ─────────────────
-if (( markers_found >= 1 )); then
+if ((markers_found >= 1)); then
   reminder_file="$LOG_DIR/value-reminder-${session_id}.md"
 
   matched_str="${matched[*]}"
 
-  cat >> "$reminder_file" <<SCOLD_EOF
+  cat >>"$reminder_file" <<SCOLD_EOF
 
 ---
 
@@ -221,7 +221,7 @@ SCOLD_EOF
     --argjson n "$markers_found" \
     --arg m "$matched_str" \
     '{ts:$ts, session_id:$sid, action:"anti-pattern-trigger", markers_found:$n, markers:$m}' \
-    >> "$AUDIT_FILE" 2>/dev/null || true
+    >>"$AUDIT_FILE" 2>/dev/null || true
 
   printf '{"continue": true, "stopReason": "VALUE anti-pattern (next-step suggestion list) detected; scolding block queued for next turn — see value-guard-next-step.jsonl"}\n'
   exit 0

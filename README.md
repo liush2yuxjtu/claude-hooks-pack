@@ -175,6 +175,16 @@ instructions pointing here.
 
 ## Design references
 
+- `docs/index.md` — Diataxis documentation map for tutorials, how-to guides,
+  reference pages, and explanations.
+- `docs/tutorial-getting-started.md` — first install, verification, test run,
+  and uninstall path for a new user.
+- `docs/how-to-install-and-manage-hooks.md` — task guide for install,
+  dry-run, uninstall, fragment generation, and local checks.
+- `docs/reference-claude-hooks-pack.md` — exact command, option, file, hook,
+  settings-fragment, and CI reference.
+- `docs/explanation-hook-pack-design.md` — rationale for source-machine
+  fragments, archived scripts, contrib one-offs, and installer safety gates.
 - `docs/HOOK_DESIGN_RUBRIC.md` — 8-section rubric + 8-question self-check
   that every new hook should pass. Existing hooks self-score in appendix A.
 - `docs/value-guard-template.md` — VALUE-cascade prompt template (root →

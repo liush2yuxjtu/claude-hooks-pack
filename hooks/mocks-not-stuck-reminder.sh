@@ -32,7 +32,10 @@ mkdir -p "$LOG_DIR" 2>/dev/null || true
 ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 input="$(cat)"
-[[ -z "$input" ]] && { printf '{"ts":"%s","evt":"empty"}\n' "$ts" >> "$AUDIT_FILE"; exit 0; }
+[[ -z "$input" ]] && {
+  printf '{"ts":"%s","evt":"empty"}\n' "$ts" >>"$AUDIT_FILE"
+  exit 0
+}
 
 # Cheap extract: grep the raw payload rather than parsing JSON, so
 # we don't fail when the payload isn't pure JSON in some harness

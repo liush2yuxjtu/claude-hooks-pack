@@ -54,7 +54,7 @@ session_id="$(printf '%s' "$input" | jq -r '.session_id // "unknown"' 2>/dev/nul
 # The agent will see this on the next turn via value-inject.sh.
 reminder_file="$LOG_DIR/value-reminder-${session_id}.md"
 
-cat > "$reminder_file" <<'REMINDER_EOF'
+cat >"$reminder_file" <<'REMINDER_EOF'
 [VALUE.md 自决 cascade — 在你准备问任何 HITL 问题前,先沿这条链推演]
 
 根  信任是放大器,问题是衰减器
@@ -88,7 +88,7 @@ REMINDER_EOF
 # --- Audit log (one line per invocation, JSONL) ---
 jq -cn --arg ts "$ts" --arg sid "$session_id" \
   '{ts:$ts, session_id:$sid, action:"remind"}' \
-  >> "$AUDIT_FILE" 2>/dev/null || true
+  >>"$AUDIT_FILE" 2>/dev/null || true
 
 # --- Stop hook return: approve, with a stopReason that surfaces the
 # reminder to the user too. We do NOT block. ---

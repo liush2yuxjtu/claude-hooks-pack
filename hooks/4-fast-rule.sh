@@ -66,7 +66,10 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 input="$(cat)"
-[[ -z "$input" ]] && { printf '{"continue": true, "suppressOutput": true}\n'; exit 0; }
+[[ -z "$input" ]] && {
+  printf '{"continue": true, "suppressOutput": true}\n'
+  exit 0
+}
 
 session_id="$(printf '%s' "$input" | jq -r '.session_id // "unknown"' 2>/dev/null)"
 transcript_path="$(printf '%s' "$input" | jq -r '.transcript_path // ""' 2>/dev/null)"
@@ -100,8 +103,8 @@ is_problem() {
   fi
   local kw
   for kw in "怎么" "如何" "怎么办" "建议" "推荐" "方案" \
-            "why" "how" "what" "should" "could" "plan" "approach" \
-            "tradeoff" "trade-off" "decide" "choose" "which"; do
+    "why" "how" "what" "should" "could" "plan" "approach" \
+    "tradeoff" "trade-off" "decide" "choose" "which"; do
     if [[ "$p" == *"$kw"* ]]; then return 0; fi
   done
   return 1
@@ -156,7 +159,7 @@ while IFS= read -r line; do
   if is_problem "$line"; then
     problem_count=$((problem_count + 1))
   fi
-done <<< "$user_turns"
+done <<<"$user_turns"
 
 # Count rule-hits in the recent assistant stream.
 while IFS= read -r line; do
@@ -164,7 +167,7 @@ while IFS= read -r line; do
   if applies_4fast "$line"; then
     rule_count=$((rule_count + 1))
   fi
-done <<< "$assistant_turns"
+done <<<"$assistant_turns"
 
 # "Unmatched" heuristic: a problem exists in the recent user stream
 # AND no 4-FAST tag exists in the recent assistant stream. This is
@@ -188,9 +191,9 @@ applies_4fast "$last_assistant" && tail_rule=1
 
 audit() {
   jq -cn --arg ts "$ts" --arg sid "$session_id" --arg action "$1" \
-        --argjson pc "$2" --argjson rc "$3" --argjson up "$4" \
+    --argjson pc "$2" --argjson rc "$3" --argjson up "$4" \
     '{ts:$ts, session_id:$sid, action:$action, problem_count:$pc, rule_count:$rc, unmatched_problems:$up}' \
-    >> "$LOG_FILE" 2>/dev/null || true
+    >>"$LOG_FILE" 2>/dev/null || true
 }
 
 block=0

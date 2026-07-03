@@ -28,7 +28,10 @@ if [[ "${CLAUDE_FOLLOWUP_NOT_ASK_DISABLED:-0}" == "1" ]]; then
   exit 0
 fi
 
-approve() { printf '{"continue": true}\n'; exit 0; }
+approve() {
+  printf '{"continue": true}\n'
+  exit 0
+}
 
 command -v jq >/dev/null 2>&1 || approve
 
@@ -59,8 +62,8 @@ low="$(printf '%s' "$last_text" | tr '[:upper:]' '[:lower:]')"
 
 # (b) Is it a question at all? No question marker → not an ask → approve.
 case "$low" in
-  *'?'*|*'？'*|*'吗'*) : ;;
-  *) approve ;;
+*'?'* | *'？'* | *'吗'*) : ;;
+*) approve ;;
 esac
 
 # (a) Deferral / follow-up keyword family (lowercase substring).
@@ -75,7 +78,7 @@ for kw in \
   "提个 issue" "提个issue" "开成 follow-up" "留作 follow" "留个 follow" \
   "留到 follow" "挂个 issue" "挂成 issue" "排到 backlog" "开成单" "开成 ticket" \
   "残留" "follow-up 吗" "follow up 吗" "要不要修" "要不要我修" "需不需要修" \
-  "是否需要修" "要我修" "要不要开" "要不要把" "要不要继续修" ; do
+  "是否需要修" "要我修" "要不要开" "要不要把" "要不要继续修"; do
   if [[ "$low" == *"$kw"* ]]; then
     matched="$kw"
     break
@@ -90,10 +93,11 @@ ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)"
 sid="$(printf '%s' "$input" | jq -r '.session_id // "unknown"' 2>/dev/null)"
 jq -cn --arg ts "$ts" --arg sid "$sid" --arg kw "$matched" \
   '{ts:$ts, session_id:$sid, action:"block-followup-ask", keyword:$kw}' \
-  >> "$LOG_DIR/followup-not-ask.jsonl" 2>/dev/null || true
+  >>"$LOG_DIR/followup-not-ask.jsonl" 2>/dev/null || true
 
 # Block the stop and tell the agent to resolve, not ask.
-reason="$(cat <<'R'
+reason="$(
+  cat <<'R'
 [hook:followup-not-ask] Your message asks the user whether to file / defer a residual problem to a follow-up issue (or whether to fix the remaining reds). Do NOT ask this.
 
 Standing rule: residual problems are resolved in the SAME session, not deferred to a follow-up issue and not gated behind a permission question.

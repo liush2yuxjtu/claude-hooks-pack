@@ -16,13 +16,16 @@ DRY_RUN=0
 SKIP_SETTINGS=0
 for arg in "$@"; do
   case "$arg" in
-    --dry-run)      DRY_RUN=1 ;;
-    --no-settings)  SKIP_SETTINGS=1 ;;
-    -h|--help)
-      sed -n '2,12p' "$0"
-      exit 0
-      ;;
-    *) echo "unknown arg: $arg" >&2; exit 2 ;;
+  --dry-run) DRY_RUN=1 ;;
+  --no-settings) SKIP_SETTINGS=1 ;;
+  -h | --help)
+    sed -n '2,12p' "$0"
+    exit 0
+    ;;
+  *)
+    echo "unknown arg: $arg" >&2
+    exit 2
+    ;;
   esac
 done
 
@@ -34,7 +37,7 @@ TARGET_SETTINGS="$HOME/.claude/settings.json"
 
 log() { printf '[install.sh] %s\n' "$*"; }
 run() {
-  if (( DRY_RUN )); then
+  if ((DRY_RUN)); then
     printf '[dry-run]'
     for arg in "$@"; do
       printf ' %q' "$arg"
@@ -53,7 +56,7 @@ for f in "$HOOKS_SRC"/*.sh "$HOOKS_SRC"/*.py; do
   # Archived / retired scripts are kept under hooks/_archive/ for reference,
   # but install.sh MUST NOT copy them into the user's hooks dir.
   case "$base" in
-    *.retired|*.solution|*.archive.*) continue ;;
+  *.retired | *.solution | *.archive.*) continue ;;
   esac
   run cp -p "$f" "$TARGET_HOOKS/$base"
   run chmod +x "$TARGET_HOOKS/$base"
@@ -67,7 +70,7 @@ run cp -p "$PACK_DIR/data/redlines.tsv" "$TARGET_HOOKS/redlines.tsv"
 # redlines.d is a per-project drop folder; user populates it themselves.
 
 # ── 2. Merge settings.json ────────────────────────────────────────────
-if (( SKIP_SETTINGS )); then
+if ((SKIP_SETTINGS)); then
   log "==> --no-settings set, skipping settings.json merge"
 else
   if [[ ! -f "$SETTINGS_SRC" ]]; then

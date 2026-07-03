@@ -31,7 +31,10 @@ LOG_FILE="$LOG_DIR/fast-iteration-inject.jsonl"
 mkdir -p "$LOG_DIR" 2>/dev/null || true
 
 input="$(cat 2>/dev/null || true)"
-[[ -z "$input" ]] && { printf '{"ts":"%s","evt":"empty_text","matched":[],"bytes":0}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$LOG_FILE"; exit 0; }
+[[ -z "$input" ]] && {
+  printf '{"ts":"%s","evt":"empty_text","matched":[],"bytes":0}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$LOG_FILE"
+  exit 0
+}
 
 prompt="$(printf '%s' "$input" | tr '[:upper:]' '[:lower:]')"
 
@@ -67,15 +70,15 @@ KEYWORDS=(
 # avoids the limit and keeps the false-positive rate low.
 matches=""
 for kw in "${KEYWORDS[@]}"; do
-    if printf '%s' "$prompt" | grep -Fq -- "$kw" 2>/dev/null; then
-        matches+="${kw}"$'\n'
-    fi
+  if printf '%s' "$prompt" | grep -Fq -- "$kw" 2>/dev/null; then
+    matches+="${kw}"$'\n'
+  fi
 done
 matches="$(printf '%s' "$matches" | sort -u | head -20)"
 
 if [[ -z "$matches" ]]; then
   printf '{"ts":"%s","evt":"no_keyword_match","matched":[],"bytes":0}\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$LOG_FILE"
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$LOG_FILE"
   exit 0
 fi
 
@@ -104,5 +107,5 @@ printf '{"ts":"%s","evt":"keyword+gate_passed","matched":%s,"bytes":%d}\n' \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   "$(printf '%s' "$matches" | python3 -c 'import json,sys; print(json.dumps([l for l in sys.stdin.read().splitlines() if l]))' 2>/dev/null || echo '[]')" \
   "${#INJECT}" \
-  >> "$LOG_FILE"
+  >>"$LOG_FILE"
 exit 0

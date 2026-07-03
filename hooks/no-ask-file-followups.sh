@@ -69,30 +69,38 @@ low="$(printf '%s' "$last_assistant" | tr '[:upper:]' '[:lower:]')"
 # shellcheck disable=SC2221,SC2222  # Pattern list is intentionally broad; early/late pattern order is irrelevant for any-match (OR) semantics.
 has_question=0
 case "$low" in
-  *"?"*|*"？"*|*"吗"*|*"要不要"*|*"要我"*|*"需要我"*|*"shall i"*|*"should i"*|*"want me to"*|*"do you want"*|*"would you like"*)
-    has_question=1 ;;
+*"?"* | *"？"* | *"吗"* | *"要不要"* | *"要我"* | *"需要我"* | *"shall i"* | *"should i"* | *"want me to"* | *"do you want"* | *"would you like"*)
+  has_question=1
+  ;;
 esac
-[[ "$has_question" -eq 0 ]] && { rm -f "$breaker" 2>/dev/null || true; exit 0; }
+[[ "$has_question" -eq 0 ]] && {
+  rm -f "$breaker" 2>/dev/null || true
+  exit 0
+}
 
 # (b) Is it about filing / tracking follow-up issues for residual work?
 about_followup=0
 for kw in "follow-up issue" "follow up issue" "followup issue" "follow-up" \
-          "开成 follow" "开成follow" "开成 issue" "开 issue" "开个 issue" "建个 issue" \
-          "开成工单" "开工单" "建工单" "残留" "遗留" "未尽" "track it as" "file ... issue" \
-          "file them as" "file as issue" "file follow" "raise an issue" "open an issue" \
-          "open issues" "开 follow" "做成 issue" "记成 issue" "single issue" "follow-up ticket"; do
-  if [[ "$low" == *"$kw"* ]]; then about_followup=1; break; fi
+  "开成 follow" "开成follow" "开成 issue" "开 issue" "开个 issue" "建个 issue" \
+  "开成工单" "开工单" "建工单" "残留" "遗留" "未尽" "track it as" "file ... issue" \
+  "file them as" "file as issue" "file follow" "raise an issue" "open an issue" \
+  "open issues" "开 follow" "做成 issue" "记成 issue" "single issue" "follow-up ticket"; do
+  if [[ "$low" == *"$kw"* ]]; then
+    about_followup=1
+    break
+  fi
 done
 
 # Tighten: also accept the very common "把...红/gap/E1...开成...issue" shape.
 if [[ "$about_followup" -eq 0 ]]; then
   case "$low" in
-    *"issue"*|*"工单"*|*"ticket"*)
-      case "$low" in
-        # shellcheck disable=SC2221,SC2222  # See note above: any-match semantics, no overlap concerns.
-        *"残留"*|*"遗留"*|*" red"*|*"reds"*|*"the red"*|*" gap"*|*"gaps"*|*" e1"*|*" e5"*|*" e6"*|*"follow"*)
-          about_followup=1 ;;
-      esac ;;
+  *"issue"* | *"工单"* | *"ticket"*)
+    case "$low" in
+    *"残留"* | *"遗留"* | *" red"* | *"reds"* | *"the red"* | *" gap"* | *"gaps"* | *" e1"* | *" e5"* | *" e6"* | *"follow"*)
+      about_followup=1
+      ;;
+    esac
+    ;;
   esac
 fi
 
@@ -104,8 +112,8 @@ fi
 # Matched: an ask about filing follow-up issues. Block once and redirect.
 ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 printf '%s\n' "{\"ts\":\"$ts\",\"session\":\"$session_id\",\"action\":\"block-and-file\"}" \
-  >> "$LOG_DIR/no-ask-file-followups.jsonl" 2>/dev/null || true
-: > "$breaker" 2>/dev/null || true
+  >>"$LOG_DIR/no-ask-file-followups.jsonl" 2>/dev/null || true
+: >"$breaker" 2>/dev/null || true
 
 reason='[hook:no-ask-file-followups] Your turn ended on a question about whether to file follow-up issues for residual reds/gaps. Do NOT ask — filing a follow-up issue is cheap, reversible, and file-only. File them NOW, then stop.
 

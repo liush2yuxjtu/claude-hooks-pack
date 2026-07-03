@@ -30,7 +30,10 @@ mkdir -p "$LOG_DIR" 2>/dev/null || true
 ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 input="$(cat)"
-[[ -z "$input" ]] && { printf '{"ts":"%s","evt":"empty"}\n' "$ts" >> "$AUDIT_FILE"; exit 0; }
+[[ -z "$input" ]] && {
+  printf '{"ts":"%s","evt":"empty"}\n' "$ts" >>"$AUDIT_FILE"
+  exit 0
+}
 
 # Cheap extract: grep the raw payload rather than parsing JSON. The
 # prompt text is somewhere in the "prompt" field, but a substring
