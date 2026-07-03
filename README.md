@@ -175,6 +175,16 @@ instructions pointing here.
 
 ## Design references
 
+- `docs/README.md` — documentation index organized by tutorial, how-to,
+  reference, and explanation.
+- `docs/tutorial-first-install.md` — first install walkthrough with dry run,
+  settings safety, restart, rollback, and baseline checks.
+- `docs/how-to.md` — task recipes for installing, refreshing source snapshots,
+  adding hooks, editing redlines, and uninstalling.
+- `docs/reference.md` — repository layout, lifecycle events, installer
+  behavior, settings merge rules, and verification commands.
+- `docs/explanation.md` — rationale for source-machine snapshots, empty
+  fragments, silent nudges, archives, and contrib one-offs.
 - `docs/HOOK_DESIGN_RUBRIC.md` — 8-section rubric + 8-question self-check
   that every new hook should pass. Existing hooks self-score in appendix A.
 - `docs/value-guard-template.md` — VALUE-cascade prompt template (root →
