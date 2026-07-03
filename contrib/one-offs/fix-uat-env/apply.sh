@@ -19,7 +19,10 @@ if [[ ! -d "$REPO" ]]; then
   exit 1
 fi
 
-cd "$REPO" || { echo "ERROR: cannot cd to $REPO" >&2; exit 1; }
+cd "$REPO" || {
+  echo "ERROR: cannot cd to $REPO" >&2
+  exit 1
+}
 
 # --- Step 1: scripts/serve.sh forwards DEER_FLOW_AUTH_DISABLED_USER_EMAIL ---
 SERVESH="scripts/serve.sh"
@@ -151,7 +154,7 @@ if [[ -f "$AGENT_SOUL" ]]; then
   echo "[4/4] $AGENT_SOUL exists — no-op"
 else
   mkdir -p "$AGENT_DIR"
-  cat > "$AGENT_SOUL" <<'SOUL'
+  cat >"$AGENT_SOUL" <<'SOUL'
 # fmcg-diagnosis-test
 
 你是 WinBrain 的 FMCG 诊断 test agent(挂在张晴 group 下)。

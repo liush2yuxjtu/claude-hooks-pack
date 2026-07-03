@@ -46,7 +46,10 @@
 
 set -uo pipefail
 
-approve() { printf '{"continue": true, "suppressOutput": true}\n'; exit 0; }
+approve() {
+  printf '{"continue": true, "suppressOutput": true}\n'
+  exit 0
+}
 
 # ── escape hatch ───────────────────────────────────────────────────────
 [[ "${CLAUDE_STRAIGHT_FIX_NO_ASK_DISABLED:-0}" == "1" ]] && approve
@@ -67,7 +70,8 @@ STATE="$HOME/.claude/hooks/state"
 mkdir -p "$STATE" 2>/dev/null || true
 CAP="${CLAUDE_STRAIGHT_FIX_NO_ASK_MAX:-5}"
 CNT_FILE="$STATE/straight-fix-no-ask.${session_id}.count"
-cnt="$(cat "$CNT_FILE" 2>/dev/null)"; cnt="${cnt:-0}"
+cnt="$(cat "$CNT_FILE" 2>/dev/null)"
+cnt="${cnt:-0}"
 if [[ "$cnt" =~ ^[0-9]+$ ]] && [[ "$cnt" -ge "$CAP" ]]; then approve; fi
 
 # ── 取最后一条 assistant 消息纯文本 ───────────────────────────────────
@@ -144,7 +148,7 @@ for kw in "${TRIGGERS[@]}"; do
   if [[ "$low" == *"$kw"* ]]; then
     markers_found=$((markers_found + 1))
     matched+=("$kw")
-    [[ "$markers_found" -ge 6 ]] && break   # 够证明即可,省时间
+    [[ "$markers_found" -ge 6 ]] && break # 够证明即可,省时间
   fi
 done
 
@@ -159,7 +163,7 @@ fi
 [[ "$markers_found" -eq 0 ]] && approve
 
 # ── 命中:记账 + per-session 日志 + block ─────────────────────────────
-echo $((cnt + 1)) > "$CNT_FILE" 2>/dev/null || true
+echo $((cnt + 1)) >"$CNT_FILE" 2>/dev/null || true
 
 LOG_DIR="$HOME/.claude/hooks/logs"
 mkdir -p "$LOG_DIR" 2>/dev/null || true
@@ -168,13 +172,14 @@ matched_json="$(printf '%s\n' "${matched[@]}" | jq -R . | jq -cs . 2>/dev/null)"
 jq -cn --arg ts "$ts" --arg sid "$session_id" --argjson mf "$markers_found" \
   --argjson m "${matched_json:-[]}" \
   '{ts:$ts, session_id:$sid, action:"block-offer-not-do", markers_found:$mf, matched:$m}' \
-  >> "$LOG_DIR/straight-fix-no-ask.jsonl" 2>/dev/null || true
+  >>"$LOG_DIR/straight-fix-no-ask.jsonl" 2>/dev/null || true
 {
   printf '\n## %s — straight-fix-no-ask 命中\n' "$ts"
   printf -- '- matched: %s\n' "$(printf '%s ' "${matched[@]}")"
-} >> "$LOG_DIR/straight-fix-no-ask-${session_id}.md" 2>/dev/null || true
+} >>"$LOG_DIR/straight-fix-no-ask-${session_id}.md" 2>/dev/null || true
 
-reason="$(cat <<'R'
+reason="$(
+  cat <<'R'
 [hook:straight-fix-no-ask] 你的收尾消息在「提议 / 留待下一轮 / 问要不要」,而不是直接动手。按 VALUE 级联(根→L1→L3:默认动作 = ship + 出证据,不是 ask),现在就去做,别问、别留:
 
 1. 把你刚才提议或要留到"下一轮 / 下次 / 后续 / 顺手"的那件事,**这一轮直接做掉** —— 探查、改代码、跑测试、出证据。彼此独立就开后台并行 subagent。

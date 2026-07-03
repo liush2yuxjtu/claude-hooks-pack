@@ -174,6 +174,11 @@ git push
 
 ## 设计参考
 
+- `docs/index.md` — Diataxis 文档入口,串起 tutorial / how-to / reference / explanation
+- `docs/tutorial-getting-started.md` — 新用户首次安装、验证、跑测试、卸载路径
+- `docs/how-to-install-and-manage-hooks.md` — 安装、dry-run、卸载、生成 fragment、本地检查
+- `docs/reference-claude-hooks-pack.md` — 命令、参数、文件、hook、settings fragment、CI 的准确参考
+- `docs/explanation-hook-pack-design.md` — source-machine fragment、archive、contrib、安装安全闸的设计理由
 - `docs/HOOK_DESIGN_RUBRIC.md` — 8 章规范 + 8 题自检,新 hook 必过
 - `docs/value-guard-template.md` — VALUE 级联(root → L1-L4 → 7 leaves)提示词模板
 - `data/redlines.tsv` — `guard.sh` 消费的 redline 表(TSV:`tool<TAB>regex<TAB>action<TAB>reason`)

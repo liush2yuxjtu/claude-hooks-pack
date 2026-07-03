@@ -64,8 +64,12 @@ SESSION_ID="$(extract_field session_id)"
 # Lowercase + strip fenced AND inline code so pasted logs / commands don't false-fire.
 norm="$(printf '%s' "$PROMPT" | tr 'A-Z' 'a-z' | sed -e 's/```[^`]*```/ /g' -e 's/`[^`]*`/ /g')"
 
-contains() { case "$norm" in *"$1"*) return 0;; *) return 1;; esac; }
-contains_any() { local t; for t in "$@"; do contains "$t" && return 0; done; return 1; }
+contains() { case "$norm" in *"$1"*) return 0 ;; *) return 1 ;; esac }
+contains_any() {
+  local t
+  for t in "$@"; do contains "$t" && return 0; done
+  return 1
+}
 
 # ── Negative filter: already-aligned prompts get no nudge ───────────────────────
 if contains_any "headless" "playwright-cli" "playwright_cli" "无头" "无头模式"; then
@@ -114,7 +118,8 @@ INTENT_TOKENS=(
   "drive " "automate" "自动化" "渲染" "render"
 )
 
-TRIGGER=""; MATCHED=""
+TRIGGER=""
+MATCHED=""
 if contains_any "${EXPLICIT_TOKENS[@]}"; then
   TRIGGER="explicit"
   for t in "${EXPLICIT_TOKENS[@]}"; do contains "$t" && MATCHED="$MATCHED${MATCHED:+,}$t"; done
@@ -128,15 +133,16 @@ fi
 [ -z "$TRIGGER" ] && exit 0
 
 # ── audit + per-session note ────────────────────────────────────────────────────
-LOG_DIR="$HOME/.claude/hooks/logs"; mkdir -p "$LOG_DIR" 2>/dev/null || true
+LOG_DIR="$HOME/.claude/hooks/logs"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
 TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 if command -v jq >/dev/null 2>&1; then
   jq -nc --arg ts "$TS" --arg sid "${SESSION_ID:-}" --arg markers "$MATCHED" --arg detail "$TRIGGER" \
     '{ts:$ts,session_id:$sid,hook:"pair-chrome-soft-gate",action:"soft-nudge-injected",markers_found:$markers,detail:$detail}' \
-    >> "$LOG_DIR/pair-chrome-soft-gate.jsonl" 2>/dev/null || true
+    >>"$LOG_DIR/pair-chrome-soft-gate.jsonl" 2>/dev/null || true
 fi
 printf -- '- %s  trigger=%s  markers=[%s]\n' "$TS" "$TRIGGER" "$MATCHED" \
-  >> "$LOG_DIR/pair-chrome-soft-gate-${SESSION_ID:-nosession}.md" 2>/dev/null || true
+  >>"$LOG_DIR/pair-chrome-soft-gate-${SESSION_ID:-nosession}.md" 2>/dev/null || true
 
 # ── inject agent-only nudge (UserPromptSubmit stdout → additionalContext) ────────
 cat <<EOF

@@ -29,7 +29,10 @@ if [[ "${CLAUDE_FOLLOWUP_SPAWN_AGENTS_DISABLED:-0}" == "1" ]]; then
   exit 0
 fi
 
-approve() { printf '{"continue": true}\n'; exit 0; }
+approve() {
+  printf '{"continue": true}\n'
+  exit 0
+}
 
 command -v jq >/dev/null 2>&1 || approve
 
@@ -62,7 +65,7 @@ for kw in \
   "follow-up" "followup" "follow up" \
   "留到下一轮" "留作 follow" "留个 follow" "下一轮再" \
   "下次再" "顺手修掉" "下次修" "下一轮修" \
-  "out-of-scope follow" "deferred to a follow" ; do
+  "out-of-scope follow" "deferred to a follow"; do
   if [[ "$low" == *"$kw"* ]]; then
     matched="$kw"
     break
@@ -77,10 +80,11 @@ ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)"
 sid="$(printf '%s' "$input" | jq -r '.session_id // "unknown"' 2>/dev/null)"
 jq -cn --arg ts "$ts" --arg sid "$sid" --arg kw "$matched" \
   '{ts:$ts, session_id:$sid, action:"block-followup-spawn-agents", keyword:$kw}' \
-  >> "$LOG_DIR/followup-spawn-agents.jsonl" 2>/dev/null || true
+  >>"$LOG_DIR/followup-spawn-agents.jsonl" 2>/dev/null || true
 
 # Block the stop and force parallel dispatch.
-reason="$(cat <<'R'
+reason="$(
+  cat <<'R'
 [hook:followup-spawn-agents] Your last message contains the "follow-up" keyword — the user explicitly does NOT want follow-up deferrals. Dispatch parallel agent teams NOW and resolve in-session.
 
 Standing rule: residual items are fixed in the SAME session by dispatching parallel work — not listed, not asked about, not deferred to a follow-up issue.

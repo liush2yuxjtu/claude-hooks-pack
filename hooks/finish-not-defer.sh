@@ -49,7 +49,10 @@
 
 set -uo pipefail
 
-approve() { printf '{"continue": true, "suppressOutput": true}\n'; exit 0; }
+approve() {
+  printf '{"continue": true, "suppressOutput": true}\n'
+  exit 0
+}
 
 # ── escape hatch ───────────────────────────────────────────────────────
 [[ "${CLAUDE_FINISH_NOT_DEFER_DISABLED:-0}" == "1" ]] && approve
@@ -70,7 +73,8 @@ STATE="$HOME/.claude/hooks/state"
 mkdir -p "$STATE" 2>/dev/null || true
 CAP="${CLAUDE_FINISH_NOT_DEFER_MAX:-4}"
 CNT_FILE="$STATE/finish-not-defer.${session_id}.count"
-cnt="$(cat "$CNT_FILE" 2>/dev/null)"; cnt="${cnt:-0}"
+cnt="$(cat "$CNT_FILE" 2>/dev/null)"
+cnt="${cnt:-0}"
 if [[ "$cnt" =~ ^[0-9]+$ ]] && [[ "$cnt" -ge "$CAP" ]]; then approve; fi
 
 # ── 取最后一条 assistant 消息纯文本 ───────────────────────────────────
@@ -125,7 +129,8 @@ DEFER_TRIGGERS=(
 )
 for kw in "${DEFER_TRIGGERS[@]}"; do
   if [[ "$low" == *"$kw"* ]]; then
-    markers_found=$((markers_found + 1)); matched+=("$kw")
+    markers_found=$((markers_found + 1))
+    matched+=("$kw")
     [[ "$markers_found" -ge 6 ]] && break
   fi
 done
@@ -146,7 +151,8 @@ if [[ "$markers_found" -lt 6 ]]; then
   )
   for kw in "${EN_DEFER[@]}"; do
     if [[ "$low" == *"$kw"* ]]; then
-      markers_found=$((markers_found + 1)); matched+=("$kw")
+      markers_found=$((markers_found + 1))
+      matched+=("$kw")
       [[ "$markers_found" -ge 6 ]] && break
     fi
   done
@@ -155,7 +161,8 @@ fi
 # ── 结构触发(rubric §1 形态):markdown 标题式"范围/遗留/局限"小节 ──────────
 if [[ "$markers_found" -eq 0 ]]; then
   if printf '%s' "$stripped" | grep -Eiq '^[[:space:]]*#{1,6}[[:space:]]*(范围(诚实)?说明|遗留(项|说明)?|未完成|局限|scope (note|caveat)|known limitation|honest|out[- ]of[- ]scope|follow[- ]?up)'; then
-    markers_found=1; matched+=("structural:scope-caveat-heading")
+    markers_found=1
+    matched+=("structural:scope-caveat-heading")
   fi
 fi
 
@@ -175,14 +182,17 @@ DONE_MARKERS=(
 )
 for kw in "${DONE_MARKERS[@]}"; do
   low2="$(printf '%s' "$kw" | tr '[:upper:]' '[:lower:]')"
-  if [[ "$low" == *"$low2"* ]]; then has_done=1; break; fi
+  if [[ "$low" == *"$low2"* ]]; then
+    has_done=1
+    break
+  fi
 done
 
 # 有 deferral 但没有完成声明/范围标题 → 这是"正在做"的诚实陈述,放行
 [[ "$has_done" -eq 0 ]] && approve
 
 # ── 命中:记账 + per-session 日志 + block ─────────────────────────────
-echo $((cnt + 1)) > "$CNT_FILE" 2>/dev/null || true
+echo $((cnt + 1)) >"$CNT_FILE" 2>/dev/null || true
 
 LOG_DIR="$HOME/.claude/hooks/logs"
 mkdir -p "$LOG_DIR" 2>/dev/null || true
@@ -191,13 +201,14 @@ matched_json="$(printf '%s\n' "${matched[@]}" | jq -R . | jq -cs . 2>/dev/null)"
 jq -cn --arg ts "$ts" --arg sid "$session_id" --argjson mf "$markers_found" \
   --argjson m "${matched_json:-[]}" --argjson hd "$has_done" \
   '{ts:$ts, session_id:$sid, action:"block-defer-while-claiming-done", markers_found:$mf, matched:$m, has_done_claim:$hd}' \
-  >> "$LOG_DIR/finish-not-defer.jsonl" 2>/dev/null || true
+  >>"$LOG_DIR/finish-not-defer.jsonl" 2>/dev/null || true
 {
   printf '\n## %s — finish-not-defer 命中\n' "$ts"
   printf -- '- matched: %s\n' "$(printf '%s ' "${matched[@]}")"
-} >> "$LOG_DIR/finish-not-defer-${session_id}.md" 2>/dev/null || true
+} >>"$LOG_DIR/finish-not-defer-${session_id}.md" 2>/dev/null || true
 
-reason="$(cat <<'R'
+reason="$(
+  cat <<'R'
 [hook:finish-not-defer] 你在一份"已完成"的收尾里,把用户明确要的核心需求切出去标成「留作增量 / 范围诚实说明 / 仍走 standalone / 缝隙已标注 / 后续对接」。用户 2026-06-26 显式规则:**要的是真做完,不是诚实地 defer**。诚实很好,但诚实 ≠ 可以不做。按 VALUE 级联(根→L3:默认动作 = ship + 出证据;L4:只有不可逆+高代价才停):
 
 1. 把你刚才标成"留作增量 / 后续 / 仍走自带 / 未真接 / 占位"的那一(几)块,**这一轮真正做完** —— 探查、改代码、起服务、跑端到端、出证据。彼此独立就开后台并行 subagent 一起做。

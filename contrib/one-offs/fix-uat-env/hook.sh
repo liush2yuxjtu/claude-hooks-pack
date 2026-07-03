@@ -38,19 +38,19 @@ input="$(cat)"
 # --- Trigger detection ---
 matched=()
 # structural markers (priority)
-[[ "$input" =~ /fix-uat-env[[:space:]] ]]    && matched+=("/fix-uat-env")
-[[ "$input" =~ \[\[fix-uat-env\]\] ]]        && matched+=("[[fix-uat-env]]")
-[[ "$input" =~ \<\<fix-uat-env\>\> ]]       && matched+=("<<fix-uat-env>>")
+[[ "$input" =~ /fix-uat-env[[:space:]] ]] && matched+=("/fix-uat-env")
+[[ "$input" =~ \[\[fix-uat-env\]\] ]] && matched+=("[[fix-uat-env]]")
+[[ "$input" =~ \<\<fix-uat-env\>\> ]] && matched+=("<<fix-uat-env>>")
 # compound keyword
-[[ "$input" =~ fix-zhangqing-uat ]]          && matched+=("fix-zhangqing-uat")
+[[ "$input" =~ fix-zhangqing-uat ]] && matched+=("fix-zhangqing-uat")
 # co-occurrence: "zhangqing" + "fix" on same line
-if echo "$input" | grep -qiE 'zhangqing' \
-   && echo "$input" | grep -qiE 'fix' ; then
+if echo "$input" | grep -qiE 'zhangqing' &&
+  echo "$input" | grep -qiE 'fix'; then
   matched+=("zhangqing+fix-co-occ")
 fi
 # natural language
-echo "$input" | grep -qiE 'reapply[[:space:]]+uat[[:space:]]+fix' \
-  && matched+=("reapply-uat-fix-nl")
+echo "$input" | grep -qiE 'reapply[[:space:]]+uat[[:space:]]+fix' &&
+  matched+=("reapply-uat-fix-nl")
 
 if [[ ${#matched[@]} -eq 0 ]]; then
   exit 0
@@ -75,13 +75,16 @@ SESSION_LOG="$LOG_DIR/fix-uat-env-${SESSION_ID}.md"
   echo "  All 4 steps are idempotent. Re-running apply.sh is safe."
   echo "- escape: CLAUDE_FIX_UAT_ENV_DISABLED=1 to silence this reminder."
   echo
-} >> "$SESSION_LOG"
+} >>"$SESSION_LOG"
 
 # Audit JSONL (rubric §6)
 ts="$(date -u +%FT%TZ)"
-joined="$(IFS=,; echo "${matched[*]}")"
+joined="$(
+  IFS=,
+  echo "${matched[*]}"
+)"
 printf '{"ts":"%s","session_id":"%s","action":"hit","matched":"%s","prompt_len":%d}\n' \
-  "$ts" "$SESSION_ID" "$joined" "${#input}" >> "$AUDIT"
+  "$ts" "$SESSION_ID" "$joined" "${#input}" >>"$AUDIT"
 
 # Silent: do not print to stdout, do not block (rubric §3)
 exit 0

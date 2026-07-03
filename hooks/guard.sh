@@ -64,36 +64,36 @@ while IFS=$'\t' read -r tool_pat regex action reason; do
 
   if grep -qE "$regex" <<<"$payload"; then
     case "${action:-warn}" in
-      block)
-        hits+=("🛑 BLOCKED: ${reason:-(no reason)}")
-        worst=2
-        ;;
-      warn)
-        hits+=("⚠️  WARN: ${reason:-(no reason)}")
-        [[ $worst -lt 1 ]] && worst=1
-        ;;
-      *)
-        hits+=("⚠️  WARN (unknown action '${action}'): ${reason:-(no reason)}")
-        [[ $worst -lt 1 ]] && worst=1
-        ;;
+    block)
+      hits+=("🛑 BLOCKED: ${reason:-(no reason)}")
+      worst=2
+      ;;
+    warn)
+      hits+=("⚠️  WARN: ${reason:-(no reason)}")
+      [[ $worst -lt 1 ]] && worst=1
+      ;;
+    *)
+      hits+=("⚠️  WARN (unknown action '${action}'): ${reason:-(no reason)}")
+      [[ $worst -lt 1 ]] && worst=1
+      ;;
     esac
   fi
-done < "$REDLINES"
+done <"$REDLINES"
 
-if (( ${#hits[@]} > 0 )); then
+if ((${#hits[@]} > 0)); then
   for h in "${hits[@]}"; do echo "$h" >&2; done
   mkdir -p "$(dirname "$LOG")"
   {
     echo "--- $(date -u +%FT%TZ) tool=$tool worst=$worst"
     for h in "${hits[@]}"; do echo "  $h"; done
-  } >> "$LOG" 2>/dev/null || true
+  } >>"$LOG" 2>/dev/null || true
 fi
 
 # Escape hatch: if every hit is warn-level (worst==1) AND the payload
 # carries an explicit `// @redline-ok` marker, downgrade to pass.
 # Hard blocks (worst==2) are NOT silenceable via comment — those
 # always require the user to fix the rule or restate the intent.
-if (( worst == 1 )) && grep -qE '@redline-ok' <<<"$payload"; then
+if ((worst == 1)) && grep -qE '@redline-ok' <<<"$payload"; then
   printf '✓ safelisted: @redline-ok marker present, warn-level rules downgraded (hard blocks still enforced)\n' >&2
   worst=0
   hits=()

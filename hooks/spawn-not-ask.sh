@@ -22,9 +22,9 @@ prompt="$(printf '%s' "$input" | tr '[:upper:]' '[:lower:]')"
 
 matched=""
 for kw in "要不要" "哪个" "要我" "该怎么" "你想" "怎么" "想让我" \
-           "or other" "or just" "which one" "want me to" "should i" \
-           "do you want" "could i" "may i" "shall i" "would you like" \
-           "any preference" "pick one" "go ahead" "ok to" "ready to"; do
+  "or other" "or just" "which one" "want me to" "should i" \
+  "do you want" "could i" "may i" "shall i" "would you like" \
+  "any preference" "pick one" "go ahead" "ok to" "ready to"; do
   if [[ "$prompt" == *"$kw"* ]]; then
     matched="$kw"
     break

@@ -49,9 +49,9 @@ reason=""
 
 # --- 1) Clash controller config WRITE that changes mode or TUN -------------
 # Block only WRITE verbs to /configs that touch mode/tun/enable. GET stays free.
-if grep -qiE '/configs([?"'"'"' ]|$)' <<<"$cmd" \
-   && grep -qiE '(-X|--request)[[:space:]]*(PATCH|PUT|POST)' <<<"$cmd" \
-   && grep -qiE '"?(mode|tun|enable)"?[[:space:]]*[:=]' <<<"$cmd"; then
+if grep -qiE '/configs([?"'"'"' ]|$)' <<<"$cmd" &&
+  grep -qiE '(-X|--request)[[:space:]]*(PATCH|PUT|POST)' <<<"$cmd" &&
+  grep -qiE '"?(mode|tun|enable)"?[[:space:]]*[:=]' <<<"$cmd"; then
   reason="changes Clash global mode / TUN via the external-controller /configs endpoint"
 fi
 
@@ -89,7 +89,7 @@ mkdir -p "$(dirname "$LOG")"
   echo "--- $(date -u +%FT%TZ) BLOCKED"
   echo "  reason: $reason"
   echo "  cmd: ${cmd:0:400}"
-} >> "$LOG" 2>/dev/null || true
+} >>"$LOG" 2>/dev/null || true
 
 # Emit a clear, actionable block to the model.
 cat >&2 <<EOF

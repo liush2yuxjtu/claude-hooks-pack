@@ -112,11 +112,11 @@ check "trigger list"
 check "matcher"
 
 # ── 命中:append rubric self-check block ──
-if (( markers_found >= 1 )); then
+if ((markers_found >= 1)); then
   reminder_file="$LOG_DIR/value-reminder-${session_id}.md"
   matched_str="${matched[*]}"
 
-  cat >> "$reminder_file" <<META_EOF
+  cat >>"$reminder_file" <<META_EOF
 
 ---
 
@@ -144,7 +144,7 @@ META_EOF
     --argjson n "$markers_found" \
     --arg m "$matched_str" \
     '{ts:$ts, session_id:$sid, action:"meta-hook-trigger", markers_found:$n, markers:$m}' \
-    >> "$AUDIT_FILE" 2>/dev/null || true
+    >>"$AUDIT_FILE" 2>/dev/null || true
 
   printf '{"continue": true, "stopReason": "meta-hook-creator: hook-creation intent detected; HOOK_DESIGN_RUBRIC.md self-check queued for next turn"}\n'
   exit 0
